@@ -1,4 +1,4 @@
-from typing import TypedDict, Literal, NotRequired, List, Union, Dict, Any, Optional
+from typing import TypedDict, Literal, NotRequired, List, Union, Dict, Any, Optional, Self
 
 from sqlalchemy import (
     Column,
@@ -78,7 +78,7 @@ class HqlQuery(TypedDict):
     order_by: NotRequired[Dict[str, HqlSort]]
     group_by: NotRequired[List[str]]
     distinct: NotRequired[bool]
-    subqueries: NotRequired[Dict[str, ["HqlQuery"]]]
+    subqueries: NotRequired[Dict[str, Self]]
     debug: NotRequired[Literal["html", "str"]]
 
 

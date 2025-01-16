@@ -7,7 +7,7 @@ from typing import TypeVar, Union, List, Tuple, Type, Set, Dict
 from marshmallow.fields import String, Float, Boolean, Integer
 from sqlalchemy.orm import DeclarativeBase
 
-from alchemancer.types import ColumnTypesT
+from alchemancer.alchemancer_types import ColumnTypesT
 
 _module = TypeVar("_module", bound=str)
 _absolute_module_path = Union[

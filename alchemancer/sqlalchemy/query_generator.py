@@ -16,7 +16,7 @@ from sqlalchemy.sql.operators import (
     regexp_match_op,
 )
 
-from alchemancer.types import (
+from alchemancer.alchemancer_types import (
     HqlQuery,
     HqlSelect,
     WhereClausT,
