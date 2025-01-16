@@ -1,0 +1,61 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [
+    "setuptools>=61.0",
+]
+
+
+[project]
+name = "Alchemancer"
+description = "Hmmm"
+readme = "README.md"
+authors = [{name = "Brandon Ingram", email = "brandoningram1996@gmail.com"}]
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Database :: Front-Ends",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "sqlalchemy",
+]
+version = "0.0.1"
+#dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/Kurloc/Alchemancer"
+Documentation = "https://github.com/Kurloc/Alchemancer?tab=readme-ov-file"
+Changelog = "https://github.com/Kurloc/Alchemancer"
+"Source Code" = "https://github.com/Kurloc/Alchemancer"
+"Issue Tracker" = "https://github.com/Kurloc/Alchemancer"
+Discussions = "https://github.com/Kurloc/Alchemancer"
+
+[project.optional-dependencies]
+sql-formatter = ["0.6.2"]
+pytest = ["6.2.5"]
+
+[tool.setuptools]
+include-package-data = true
+license-files = ["LICENSE"]
+
+[tool.setuptools.packages.find]
+where = ["alchemancer"]
+namespaces = false
+
+
+[tool.black]
+line-length = 88
+target-version = ['py310', 'py311', 'py312', 'py313']
+
+# disable isort, for IDEs that just default isort to be turned on, e.g. vscode.
+[tool.isort]
+skip_glob=['*']

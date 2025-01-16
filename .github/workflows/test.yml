@@ -1,0 +1,30 @@
+name: Run Tests
+
+on:
+  push:
+    branches: [ $default-branch ]
+  pull_request:
+    branches: [ $default-branch ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: python@3.11-slim-bullseye
+    services:
+      postgres:
+        image: postgres
+        ports:
+        - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install project deps
+      run: pip install -e .
+
+    - name: Run Tests
+      run: python -m pytest -rA tests

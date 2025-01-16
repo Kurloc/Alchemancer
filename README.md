@@ -1,1 +1,75 @@
-# Alchemancer
+TODO:
+
+1) SubQueries
+    1) Basic support has been implemented
+2) Resolvers
+    1) Need to evaluate path forward, Temp tables VS literal subqueries
+3) Plugin systems
+   1) Plugin is a bit of a misnomer here, this is more of a module system. 
+There are configurable slots and you can plugin in modules to the slots, this is more for core maintainers of Alchemancer 
+than end users. We utilize this paradigm to enable support for like top level features that have 
+different underlying implementation details
+   1) JSON query support
+   2) Rule system to allow/deny access to fields based on user roles
+   3)  
+4) FastAPI example
+5) Django example
+6) Flask example
+7) Tutorials
+8) User Docs
+9) Implementer Docs
+
+# Resolver Support
+
+Required Features:
+
+|          | Temp Tables | CTE / Literal Subquery |   |   |
+|----------|-------------|------------------------|---|---|
+| Postgres | ✔ ️         |                        |   |   |
+| Sqlite   |             |                        |   |   |
+| MySQL    |             |                        |   |   | 
+| MsSql    |             |                        |   |   |
+| Oracle   |             |                        |   |   |
+
+# JSON Support
+
+|          | JSON |
+|----------|------|
+| Postgres | ✔ ️  |
+| Sqlite   | ✔    |
+| MySQL    | ✔    | 
+| MsSql    | ✔    |
+| Oracle   | ✔    |
+
+```mermaid
+flowchart TD
+    A[SqlAlchemy]
+    AA[Alchemancer Core]
+    AAH[Alchemancer Core Plugin Hooks]
+    P[Postgres]
+    M[Mysql]
+    S[Sqlite]
+    O[Oracle]
+    MS[Microsoft SQL Server]
+    AP[Alchemancer Postgres]
+    AM[Alchemancer Mysql]
+    AS[Alchemancer Sqlite]
+    AO[Alchemancer Oracle]
+    AMS[Alchemancer Microsoft SQL Server]
+    U[User Application]
+    C[Custom User Plugins]
+    US[User Query Endpoint]
+    P -->|#1 Support| AP
+    M -->|#2 Support| AM
+    S -->|#3 Support| AS
+    O -->|#5 Support| AO
+    MS -->|#4 Support| AMS
+    AP --> AAH
+    AM --> AAH
+    AS --> AAH
+    AO --> AAH
+    AMS --> AAH
+    A --> AA --> U --> US
+    U -->|Custom sqlalchemy functions, resolvers, etc| C --> AAH
+    AAH --> AA
+```
