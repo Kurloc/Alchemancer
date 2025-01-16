@@ -41,7 +41,7 @@ Discussions = "https://github.com/Kurloc/Alchemancer"
 
 [project.optional-dependencies]
 postgres = [
-    "psycopg2==2.9.10"
+    "psycopg2-binary==2.9.10"
 ]
 test_no_db = [
     "sql-formatter==0.6.2",

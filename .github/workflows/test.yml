@@ -9,7 +9,7 @@ on:
     branches: [ $default-branch ]
 
 jobs:
-  build:
+  run_tests:
     runs-on: ubuntu-latest
     container:
       image: python:3.11-slim-bullseye
