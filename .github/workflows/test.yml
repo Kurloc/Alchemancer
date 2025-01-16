@@ -12,7 +12,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: python@3.11-slim-bullseye
+      image: python:3.11-slim-bullseye
     services:
       postgres:
         image: postgres
