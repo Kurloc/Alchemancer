@@ -6,7 +6,7 @@ requires = [
 
 
 [project]
-name = "Alchemancer"
+name = "alchemancer"
 description = "Hmmm"
 readme = "README.md"
 authors = [{name = "Brandon Ingram", email = "brandoningram1996@gmail.com"}]
@@ -40,8 +40,16 @@ Changelog = "https://github.com/Kurloc/Alchemancer"
 Discussions = "https://github.com/Kurloc/Alchemancer"
 
 [project.optional-dependencies]
-sql-formatter = ["0.6.2"]
-pytest = ["6.2.5"]
+postgres = [
+    "psycopg2==2.9.10"
+]
+test_no_db = [
+    "sql-formatter==0.6.2",
+    "pytest==6.2.5"
+]
+test = [
+    "alchemancer[postgres,test_no_db]"
+]
 
 [tool.setuptools]
 include-package-data = true
