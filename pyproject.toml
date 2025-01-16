@@ -45,7 +45,8 @@ postgres = [
 ]
 test_no_db = [
     "sql-formatter==0.6.2",
-    "pytest==6.2.5"
+    "pytest==6.2.5",
+    "SQLAlchemy-Utils==0.41.2"
 ]
 test = [
     "alchemancer[postgres,test_no_db]"
