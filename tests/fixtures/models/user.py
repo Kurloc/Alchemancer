@@ -25,7 +25,7 @@ class User(BaseModel):
         back_populates="user",
         cascade="all, delete-orphan"
     )
-    account_details = mapped_column(JSON, default={})
+    account_details = mapped_column(JSON, default={"test": "123", "nested": {"inner_test":234}})
 #
 # spongebob = User(
 #          name="spongebob",

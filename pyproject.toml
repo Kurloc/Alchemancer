@@ -52,6 +52,10 @@ test_no_db = [
 test = [
     "alchemancer[postgres,test_no_db]"
 ]
+dev = [
+    "pre_commit==4.1.0",
+    "alchemancer[postgres,test_no_db]"
+]
 
 [tool.setuptools]
 include-package-data = true
