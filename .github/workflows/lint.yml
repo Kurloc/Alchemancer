@@ -22,13 +22,17 @@ jobs:
     - name: Run Tests
       run: |
         echo "$(pwd)"
-        sudo chown -R $USER:$USER ./
+        sudo chown -R $USER:$USER "$(pwd)"
         if [[ ${{ github.event_name == 'pull_request' }} ]]
         then
-          files_changed=`$(sudo git diff --name-only origin/${{ github.base_ref }}...${{ github.head_ref }} | xargs || echo "")`;
+          files_changed=`git diff --name-only origin/${{ github.base_ref }}...${{ github.head_ref }}`;
+          echo "$files_changed"
         else
-          files_changed=`$(sudo git merge-base origin/${{ github.event.repository.default_branch }})`;
+          files_changed=`git merge-base origin/${{ github.event.repository.default_branch }} HEAD`;
+          echo "$files_changed"
         fi
+        
+        files_changed=`git diff --name-only $files_changed | xargs || echo ''`
 
         echo "files_changed: $files_changed"
         echo $files_changed | xargs python3 -m pre_commit run --color=always --files;
