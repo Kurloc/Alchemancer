@@ -1,16 +1,14 @@
 import os
 from pathlib import Path
 
-from sqlalchemy import func
+from ast_handler import AstHandler
+from reflection_handler import ReflectionHandler
 from sqlalchemy.dialects.postgresql import aggregate_order_by
-from sqlalchemy.sql.functions import coalesce, array_agg
+from sqlalchemy.sql.functions import array_agg, coalesce, func
 
-from alchemancer.sqlalchemy.query_generator import QueryGenerator
-from alchemancer.sqlalchemy.reflection_handler import ReflectionHandler
 from tests.fixtures.models.user import User
-from tests.fixtures.test_dbs import psql_engine
 
-ReflectionHandler().init(
+handler = ReflectionHandler().init(
     [
         (
             "tests.fixtures.models",
@@ -24,7 +22,7 @@ ReflectionHandler().init(
 
 
 def test_ast_functions_1():
-    token = QueryGenerator(psql_engine)._convert_ast_to_sqlalchemy_column(
+    token = AstHandler().convert_ast_to_sqlalchemy_column(
         """
 # amdql select / column string
 array_agg(aggregate_order_by(User.id, coalesce(User.account_balance, 0).desc()))
@@ -43,7 +41,7 @@ array_agg(aggregate_order_by(User.id, coalesce(User.account_balance, 0).desc()))
 
 
 def test_ast_functions_2():
-    token = QueryGenerator(psql_engine)._convert_ast_to_sqlalchemy_column(
+    token = AstHandler().convert_ast_to_sqlalchemy_column(
         """
 # amdql select / column string
 array_agg(aggregate_order_by(coalesce(User.account_balance, 0), coalesce(User.account_balance, 0).desc()))
@@ -62,7 +60,7 @@ array_agg(aggregate_order_by(coalesce(User.account_balance, 0), coalesce(User.ac
 
 
 def test_ast_functions_3():
-    token = QueryGenerator(psql_engine)._convert_ast_to_sqlalchemy_column(
+    token = AstHandler().convert_ast_to_sqlalchemy_column(
         "coalesce(coalesce(array_agg(aggregate_order_by(User.id, User.id.desc()), '0'), 0))",
         {
             "aggregate_order_by": aggregate_order_by,
@@ -77,32 +75,26 @@ def test_ast_functions_3():
 
 
 def test_ast_obj():
-    assert type(User) == type(
-        QueryGenerator(psql_engine)._convert_ast_to_sqlalchemy_column("User", {})
-    )
+    assert type(User) == type(AstHandler().convert_ast_to_sqlalchemy_column("User", {}))
 
 
 def test_ast_constant():
-    assert 1 == QueryGenerator(psql_engine)._convert_ast_to_sqlalchemy_column("1", {})
+    assert 1 == AstHandler().convert_ast_to_sqlalchemy_column("1", {})
 
 
 def test_ast_obj_field():
-    assert User.id == QueryGenerator(psql_engine)._convert_ast_to_sqlalchemy_column(
-        "User.id", {}
-    )
+    assert User.id == AstHandler().convert_ast_to_sqlalchemy_column("User.id", {})
 
 
 def test_ast_field_method_no_params():
     assert str(User.id.desc()) == str(
-        QueryGenerator(psql_engine)._convert_ast_to_sqlalchemy_column(
-            "User.id.desc()", {}
-        )
+        AstHandler().convert_ast_to_sqlalchemy_column("User.id.desc()", {})
     )
 
 
 def test_ast_function_no_params():
     assert str(coalesce()) == str(
-        QueryGenerator(psql_engine)._convert_ast_to_sqlalchemy_column(
+        AstHandler().convert_ast_to_sqlalchemy_column(
             "coalesce()", {"coalesce": coalesce}
         )
     )
@@ -110,7 +102,7 @@ def test_ast_function_no_params():
 
 def test_ast_function_params():
     assert str(coalesce(1, 0)) == str(
-        QueryGenerator(psql_engine)._convert_ast_to_sqlalchemy_column(
+        AstHandler().convert_ast_to_sqlalchemy_column(
             "coalesce(1, 0)", {"coalesce": coalesce}
         )
     )
@@ -118,7 +110,7 @@ def test_ast_function_params():
 
 def test_ast_function_with_function_params():
     assert str(coalesce(None, func.now())) == str(
-        QueryGenerator(psql_engine)._convert_ast_to_sqlalchemy_column(
+        AstHandler().convert_ast_to_sqlalchemy_column(
             "coalesce(None, now())", {"coalesce": coalesce, "now": func.now}
         )
     )
@@ -126,7 +118,7 @@ def test_ast_function_with_function_params():
 
 def test_ast_function_with_function_params_zoo():
     assert str(coalesce(coalesce(None, func.now()), 0).desc()) == str(
-        QueryGenerator(psql_engine)._convert_ast_to_sqlalchemy_column(
+        AstHandler().convert_ast_to_sqlalchemy_column(
             "coalesce(coalesce(None, now()), 0).desc()",
             {"coalesce": coalesce, "now": func.now},
         )
@@ -142,7 +134,7 @@ def test_ast_function_with_function_params_zoo_giga():
             )
         )
     ) == str(
-        QueryGenerator(psql_engine)._convert_ast_to_sqlalchemy_column(
+        AstHandler().convert_ast_to_sqlalchemy_column(
             "array_agg(aggregate_order_by(coalesce(User.account_balance, 0), coalesce(User.account_balance, 0).desc()))",
             {
                 "coalesce": coalesce,

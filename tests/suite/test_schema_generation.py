@@ -1,17 +1,17 @@
 import os
 from pathlib import Path
-from typing import Dict, List, Tuple, Any
+from typing import Any, Dict, List, Tuple
 
 import pytest
-from sqlalchemy import insert, Engine, text, select
-from sqlalchemy_utils import database_exists, create_database
+from query_generator import QueryGenerator
+from reflection_handler import ReflectionHandler
+from sqlalchemy import Engine, insert, select, text
+from sqlalchemy_utils import create_database, database_exists
 
-from alchemancer.sqlalchemy.query_generator import QueryGenerator
-from alchemancer.sqlalchemy.reflection_handler import ReflectionHandler
 from tests.fixtures.models.base_model import BaseModel
 from tests.fixtures.models.role import Role
 from tests.fixtures.models.user import User
-from tests.fixtures.test_dbs import sqlite_engine, psql_engine
+from tests.fixtures.test_dbs import psql_engine, sqlite_engine
 
 if not database_exists(psql_engine.url):
     create_database(psql_engine.url)
@@ -46,7 +46,7 @@ test_cases = [
         str(
             Path.joinpath(
                 (Path(__file__).parent.parent.parent),  # suite dir  # tests dir
-                f"examples/queries",
+                "examples/queries",
             )
         ),
         "examples.queries",

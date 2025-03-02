@@ -1,11 +1,11 @@
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, Query
-from sqlalchemy import select
+from database import create_db_and_tables, get_session
+from models import Hero, HeroCreate, HeroPublic, HeroUpdate
 from sqlmodel import Session
 
-from database import get_session, create_db_and_tables
-from models import HeroPublic, HeroCreate, HeroUpdate, Hero
+from alchemancer import select
+from fastapi import Depends, FastAPI, HTTPException, Query
 
 SessionDep = Annotated[Session, Depends(get_session)]
 app = FastAPI()

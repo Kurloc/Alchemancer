@@ -1,44 +1,45 @@
 from typing import (
     Any,
-    Dict,
     Callable,
-    cast,
+    Dict,
     List,
     Optional,
-    Union,
     Tuple,
     Type,
+    Union,
+    cast,
 )
 
-
 import marshmallow
-from sqlalchemy import Select, and_, or_, case, Engine, Connection
+from ast_handler import AstHandler
+from reflection_handler import (
+    ReflectionHandler,
+)
+from sqlalchemy import Connection, Engine, Select, case
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.sql._typing import _ColumnExpressionArgument
 from sqlalchemy.sql.functions import array_agg, coalesce
 from sqlalchemy.sql.operators import (
+    and_,
     is_,
     is_not,
     like_op,
-    not_like_op,
     not_ilike_op,
+    not_like_op,
+    or_,
     regexp_match_op,
 )
 
-from alchemancer.alchemancer_types import (
+from alchemancer.types.query import (
     ColumnListT,
     GeneratedQuery,
     HqlJoin,
     HqlQuery,
-    HqlUnion,
     HqlSelect,
+    HqlUnion,
     NoOpConnection,
     WhereClausT,
 )
-from alchemancer.sqlalchemy.reflection_handler import (
-    ReflectionHandler,
-)
-from alchemancer.sqlalchemy.ast_handler import AstHandler
 
 
 class QueryGenerator:
@@ -130,7 +131,7 @@ class QueryGenerator:
         for x in generated_query.query.columns:
             python_type = x.type.python_type
             is_many = False
-            if python_type == list:
+            if python_type is list:
                 is_many = True
                 python_type = x.type.item_type.python_type
 

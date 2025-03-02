@@ -2,18 +2,16 @@ import inspect
 import os
 import sys
 from pathlib import Path
-from typing import TypeVar, Union, List, Tuple, Type, Set, Dict
+from typing import Dict, List, Set, Tuple, Type, TypeVar, Union
 
-from marshmallow.fields import String, Float, Boolean, Integer
+from marshmallow.fields import Boolean, Float, Integer, String
 from sqlalchemy.orm import DeclarativeBase
 
-from alchemancer.alchemancer_types import ColumnTypesT
+from alchemancer.types.marshmallow import JsonBField, JsonField
+from alchemancer.types.query import ColumnTypesT
 
 _module = TypeVar("_module", bound=str)
-_absolute_module_path = Union[
-    Path,
-    str
-]
+_absolute_module_path = Union[Path, str]
 
 
 class ReflectionHandler:
@@ -28,13 +26,13 @@ class ReflectionHandler:
         float: Float,
         str: String,
         bool: Boolean,
-        dict: Dict
+        dict: Dict,
+        JsonBField: JsonBField,
+        JsonField: JsonBField,
     }
 
     @staticmethod
-    def init(
-            model_dir_module_paths: List[Tuple[_module, _absolute_module_path]]
-    ):
+    def init(model_dir_module_paths: List[Tuple[_module, _absolute_module_path]]):
         """
         Loads and imports modules using a list of module names and paths
 
@@ -45,10 +43,13 @@ class ReflectionHandler:
         """
         model_classes = []
         for module_set in model_dir_module_paths:
-            model_classes.extend(list(ReflectionHandler._import_modules_from_path(
-                module_set[1],
-                module_set[0]
-            )))
+            model_classes.extend(
+                list(
+                    ReflectionHandler._import_modules_from_path(
+                        module_set[1], module_set[0]
+                    )
+                )
+            )
 
         for _class in model_classes:
             if hasattr(_class, "__table__"):
@@ -56,16 +57,18 @@ class ReflectionHandler:
                 ReflectionHandler.model_field_cache[_class.__name__] = {}
                 columns = _class.__table__.columns
                 for column in columns:
-                    ReflectionHandler.model_field_cache[_class.__name__][column.name] = column
+                    ReflectionHandler.model_field_cache[_class.__name__][
+                        column.name
+                    ] = column
 
     @staticmethod
     def _import_modules_from_path(
-            module_path: _absolute_module_path,
-            module_name: str,
-            types_to_import: List[Type] = None,
-            excluded_dir_names: List[str] = None,
-            check_subclasses_of_type: bool = True,
-            return_instances=False
+        module_path: _absolute_module_path,
+        module_name: str,
+        types_to_import: List[Type] = None,
+        excluded_dir_names: List[str] = None,
+        check_subclasses_of_type: bool = True,
+        return_instances=False,
     ) -> Set[Type[DeclarativeBase]]:
         types_to_import = types_to_import or [DeclarativeBase]
         excluded_dir_names = excluded_dir_names or ["__pycache__"]
@@ -84,15 +87,16 @@ class ReflectionHandler:
 
             files_in_dir = os.listdir(dir_path)
             files_to_import_from = [
-                f[:-3] for f in files_in_dir
-                if f.endswith(".py") and f != "__init__.py"
+                f[:-3] for f in files_in_dir if f.endswith(".py") and f != "__init__.py"
             ]
 
             objects_to_possibly_import = []
             for file in files_to_import_from:
                 files_module_name = f"{module_chain}.{file}"
                 _modules_to_import = [
-                    __import__(files_module_name, fromlist=[f"{dir_path}{os.sep}{file}"])
+                    __import__(
+                        files_module_name, fromlist=[f"{dir_path}{os.sep}{file}"]
+                    )
                 ]
 
                 for __module in _modules_to_import:
@@ -111,7 +115,9 @@ class ReflectionHandler:
                             if _type in base_classes:
                                 if not return_instances:
                                     class_set.add(_object)
-                                    setattr(sys.modules[__name__], _type.__name__, _type)
+                                    setattr(
+                                        sys.modules[__name__], _type.__name__, _type
+                                    )
                                 else:
                                     class_set.append(_object)
                 else:

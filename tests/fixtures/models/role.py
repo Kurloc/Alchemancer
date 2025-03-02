@@ -1,7 +1,4 @@
-from typing import Optional, List, Dict
-
-from sqlalchemy import String, ForeignKey, JSON, Column
-from sqlalchemy.orm import mapped_column, Mapped, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from tests.fixtures.models.base_model import BaseModel
 

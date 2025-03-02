@@ -1,4 +1,4 @@
-from sqlmodel import Field, Session, SQLModel, create_engine, select
+from sqlmodel import Field, SQLModel
 
 
 # This example is for SQLModel which makes your sqlalchemy models pydantic models, but I don't recommend mixing these

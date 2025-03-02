@@ -3,12 +3,12 @@ from pathlib import Path
 from typing import Dict
 
 import pytest
+from query_generator import QueryGenerator
+from reflection_handler import ReflectionHandler
 from sql_formatter.core import format_sql
 from sqlalchemy import func, over
 from sqlalchemy.dialects.postgresql import aggregate_order_by
 
-from alchemancer.sqlalchemy.query_generator import QueryGenerator
-from alchemancer.sqlalchemy.reflection_handler import ReflectionHandler
 from tests.fixtures.test_dbs import psql_engine
 
 ReflectionHandler().init(
@@ -29,7 +29,7 @@ test_cases = [
         str(
             Path.joinpath(
                 (Path(__file__).parent.parent.parent),  # suite dir  # tests dir
-                f"examples/queries",
+                "examples/queries",
             )
         ),
         "examples.queries",

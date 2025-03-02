@@ -1,21 +1,21 @@
 import ast
 from typing import Any, Callable, Dict, Optional, Tuple, cast
 
+from reflection_handler import (
+    ReflectionHandler,
+)
 from sqlalchemy import Select
 
-from alchemancer.alchemancer_types import (
+from alchemancer.types.query import (
     ColumnTypesT,
-)
-from alchemancer.sqlalchemy.reflection_handler import (
-    ReflectionHandler,
 )
 
 
 class AstHandler:
     reflection_handler: ReflectionHandler
 
-    def __init__(self, reflection_handler: ReflectionHandler) -> None:
-        self.reflection_handler = reflection_handler
+    def __init__(self, reflection_handler: Optional[ReflectionHandler] = None) -> None:
+        self.reflection_handler = reflection_handler or ReflectionHandler()
 
     def convert_ast_to_sqlalchemy_column(
         self, functional_column: str, context: Dict, model_key: Optional[str] = None
@@ -50,7 +50,7 @@ class AstHandler:
                 value = cast(ast.keyword, value)
                 return self._process_keyword(value, context, model_key)
 
-        raise NotImplemented(f"Not implemented: {value}")
+        raise NotImplementedError(f"Not implemented: {value}")
 
     def _process_name(
         self, name_obj: ast.Name, context: Dict, model_key: Optional[str] = None
