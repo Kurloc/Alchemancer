@@ -23,9 +23,9 @@ jobs:
       run: |
         if [[ ${{ github.event_name == 'pull_request' }} ]]
         then
-          files_changed=`$(git diff --name-only origin/${{ github.base_ref }}...${{ github.head_ref }} | xargs || echo "")`;
+          files_changed=`$(sudo git diff --name-only origin/${{ github.base_ref }}...${{ github.head_ref }} | xargs || echo "")`;
         else
-          files_changed=`$(git merge-base origin/${{ github.event.repository.default_branch }})`;
+          files_changed=`$(sudo git merge-base origin/${{ github.event.repository.default_branch }})`;
         fi
 
         echo "files_changed: $files_changed"
