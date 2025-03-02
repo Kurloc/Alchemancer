@@ -45,34 +45,6 @@ class QueryGenerator:
         }
         self._engine = engine
 
-    def return_from_hql_query(self, query: HqlQuery):
-        context_dict = {**self.base_context_dict}
-        with self._engine.connect() as connection:
-            generated_query = self._process_query(query, context_dict, connection)
-            response = connection.execute(generated_query.query).fetchall()
-
-        schema_dict = {}
-        for x in generated_query.query.columns:
-            python_type = x.type.python_type
-            is_many = False
-            if python_type == list:
-                is_many = True
-                python_type = x.type.item_type.python_type
-
-            marshmallow_field = (
-                self.reflection_handler.python_primitive_types_to_marshmallow_fields[
-                    python_type
-                ]
-            )
-            schema_dict[x.name] = (
-                marshmallow.fields.List(marshmallow_field())
-                if is_many
-                else marshmallow_field()
-            )
-
-        schema = marshmallow.Schema.from_dict(fields=schema_dict)(many=True)
-        return schema.dump(response)
-
     def _process_query(
         self,
         query: HqlQuery,
@@ -137,76 +109,33 @@ class QueryGenerator:
 
         return GeneratedQuery(query, limit, offset)
 
-    def _process_group_by(self, group_by, query):
-        group_by_columns = []
-        for column in group_by:
-            split_key = column.split(".")
-            model_name = split_key[0]
-            field_name = split_key[1]
-            group_by_columns.append(
-                self.reflection_handler.model_field_cache[model_name][field_name]
+    def return_from_hql_query(self, query: HqlQuery):
+        context_dict = {**self.base_context_dict}
+        with self._engine.connect() as connection:
+            generated_query = self._process_query(query, context_dict, connection)
+            response = connection.execute(generated_query.query).fetchall()
+
+        schema_dict = {}
+        for x in generated_query.query.columns:
+            python_type = x.type.python_type
+            is_many = False
+            if python_type == list:
+                is_many = True
+                python_type = x.type.item_type.python_type
+
+            marshmallow_field = (
+                self.reflection_handler.python_primitive_types_to_marshmallow_fields[
+                    python_type
+                ]
             )
-        query = query.group_by(*group_by_columns)
-        return query
-
-    def _process_order_by(self, order_by, query):
-        order_by_columns = {}
-        for column in order_by:
-            value = order_by[column]
-            split_key = column.split(".")
-            model_name = split_key[0]
-            field_name = split_key[1]
-            if value["dir"] == "desc":
-                order_by_columns[value["index"]] = (
-                    self.reflection_handler.model_field_cache[model_name][
-                        field_name
-                    ].desc()
-                )
-            else:
-                order_by_columns[value["index"]] = (
-                    self.reflection_handler.model_field_cache[model_name][
-                        field_name
-                    ].asc()
-                )
-        order_by_array = []
-        keys_len = len(order_by_columns)
-        for idx in range(keys_len):
-            order_by_array.append(order_by_columns[idx])
-        query = query.order_by(*order_by_array)
-        return query
-
-    def _process_union(
-        self,
-        context_dict: Dict,
-        union: HqlUnion,
-        union_all: bool,
-        connection: Optional[Connection] = NoOpConnection,
-    ):
-        # run the left side of the query and throw it into the context for referencing by name
-        processed_left = self._process_query(
-            union["left"], context_dict, connection
-        ).query
-        context_dict[union["left"]["alias"]] = processed_left
-
-        # run the right side of the query, then apply the union on it and the cte if needed
-        processed_right = self._process_query(
-            union["right"], context_dict, connection
-        ).query
-
-        if union_all:
-            union_query = processed_left.union_all(processed_right)
-        else:
-            union_query = processed_left.union(processed_right)
-
-        union_cte = union.get("cte")
-        if union_cte:
-            union_query = union_query.cte(
-                name=union_cte["name"], recursive=union_cte.get("recursive", False)
+            schema_dict[x.name] = (
+                marshmallow.fields.List(marshmallow_field())
+                if is_many
+                else marshmallow_field()
             )
-            context_dict[union_cte["name"]] = union_query
 
-        # Everything should be in the context under it's alias, now we can reference the items in the rest of the query
-        context_dict[union["name"]] = union_query
+        schema = marshmallow.Schema.from_dict(fields=schema_dict)(many=True)
+        return schema.dump(response)
 
     def _process_sub_queries(
         self,
@@ -393,6 +322,77 @@ class QueryGenerator:
             joins_to_return.append((model, where_clauses))
 
         return select_columns, joins_to_return
+
+    def _process_group_by(self, group_by, query):
+        group_by_columns = []
+        for column in group_by:
+            split_key = column.split(".")
+            model_name = split_key[0]
+            field_name = split_key[1]
+            group_by_columns.append(
+                self.reflection_handler.model_field_cache[model_name][field_name]
+            )
+        query = query.group_by(*group_by_columns)
+        return query
+
+    def _process_order_by(self, order_by, query):
+        order_by_columns = {}
+        for column in order_by:
+            value = order_by[column]
+            split_key = column.split(".")
+            model_name = split_key[0]
+            field_name = split_key[1]
+            if value["dir"] == "desc":
+                order_by_columns[value["index"]] = (
+                    self.reflection_handler.model_field_cache[model_name][
+                        field_name
+                    ].desc()
+                )
+            else:
+                order_by_columns[value["index"]] = (
+                    self.reflection_handler.model_field_cache[model_name][
+                        field_name
+                    ].asc()
+                )
+        order_by_array = []
+        keys_len = len(order_by_columns)
+        for idx in range(keys_len):
+            order_by_array.append(order_by_columns[idx])
+        query = query.order_by(*order_by_array)
+        return query
+
+    def _process_union(
+        self,
+        context_dict: Dict,
+        union: HqlUnion,
+        union_all: bool,
+        connection: Optional[Connection] = NoOpConnection,
+    ):
+        # run the left side of the query and throw it into the context for referencing by name
+        processed_left = self._process_query(
+            union["left"], context_dict, connection
+        ).query
+        context_dict[union["left"]["alias"]] = processed_left
+
+        # run the right side of the query, then apply the union on it and the cte if needed
+        processed_right = self._process_query(
+            union["right"], context_dict, connection
+        ).query
+
+        if union_all:
+            union_query = processed_left.union_all(processed_right)
+        else:
+            union_query = processed_left.union(processed_right)
+
+        union_cte = union.get("cte")
+        if union_cte:
+            union_query = union_query.cte(
+                name=union_cte["name"], recursive=union_cte.get("recursive", False)
+            )
+            context_dict[union_cte["name"]] = union_query
+
+        # Everything should be in the context under it's alias, now we can reference the items in the rest of the query
+        context_dict[union["name"]] = union_query
 
     def _convert_ast_to_sqlalchemy_column(
         self, functional_column: str, context: Dict, model_key: Optional[str] = None
