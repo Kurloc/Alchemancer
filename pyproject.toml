@@ -41,9 +41,11 @@ Changelog = "https://github.com/Kurloc/Alchemancer"
 Discussions = "https://github.com/Kurloc/Alchemancer"
 
 [project.optional-dependencies]
+# app useage
 postgres = [
     "psycopg2-binary==2.9.10"
 ]
+# testing
 test_no_db = [
     "sql-formatter==0.6.2",
     "pytest==6.2.5",
@@ -52,9 +54,15 @@ test_no_db = [
 test = [
     "alchemancer[postgres,test_no_db]"
 ]
+# local dev
 dev = [
     "pre_commit==4.1.0",
     "alchemancer[postgres,test_no_db]"
+]
+# example apps
+fastapi = [
+    "sqlmodel==0.0.23",
+    "fastapi[standard]"
 ]
 
 [tool.setuptools]

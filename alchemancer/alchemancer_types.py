@@ -1,29 +1,33 @@
+import abc
 from abc import ABCMeta
 from typing import (
-    TypedDict,
+    Any,
+    Callable,
+    Dict,
+    List,
     Literal,
     NotRequired,
-    List,
-    Union,
-    Dict,
-    Any,
     Optional,
     Self,
+    Type,
+    TypedDict,
+    Union,
 )
 
 from sqlalchemy import (
     Column,
     ColumnElement,
-    Select,
-    Executable,
     Connection,
     CursorResult,
+    Executable,
+    Select,
 )
 from sqlalchemy.engine.interfaces import (
     CoreExecuteOptionsParameter,
     _CoreAnyExecuteParams,
 )
 from sqlalchemy.orm import InstrumentedAttribute, RelationshipProperty
+from sqlalchemy.reflection_handler import ReflectionHandler
 from sqlalchemy.sql.elements import KeyedColumnElement
 
 ColumnTypesT = Union[
@@ -33,6 +37,7 @@ ColumnTypesT = Union[
     KeyedColumnElement,
     RelationshipProperty,
 ]
+
 
 ColumnListT = List[ColumnTypesT]
 ValueTypesT = Union[
@@ -81,6 +86,7 @@ PrimitiveT = Union[
 WhereClausT = Dict[str, ValueTypesT]
 
 
+# QUERY models
 class HqlSort(TypedDict):
     dir: Literal["asc", "desc"]
     index: int
@@ -135,6 +141,7 @@ class HqlQuery(TypedDict):
     debug: NotRequired[Literal["html", "str"]]
 
 
+# Generator Models
 class GeneratedQuery:
     query: Select
     limit: Optional[int]
@@ -159,5 +166,38 @@ class NoOpConnection(Connection):
         pass
 
 
-class JsonPlugin(ABCMeta):
+class JsonPlugin(metaclass=ABCMeta):
     sqlalchemy_functions: Dict[str, Any]
+
+
+# Resolver Models
+class ResolverParameter:
+    default_value: Union[Any, Callable]
+    optional: bool = False
+    python_type: Type[Any]
+
+
+class HqlResolver(metaclass=ABCMeta):
+    __reflection_handler: ReflectionHandler
+    __table: str
+    __connection: Connection
+    __execution_query: HqlQuery
+    __executed: bool
+
+    @property
+    @abc.abstractmethod
+    def resolver_parameters(self) -> Dict[str, ResolverParameter]:
+        return {}
+
+    def __init__(
+        self,
+        connection: Optional[Connection] = None,
+        reflection_handler: Optional[ReflectionHandler] = None,
+        **kwargs,
+    ):
+        self.__connection = connection
+        self.__reflection_handler = reflection_handler
+
+
+class TRe(HqlResolver):
+    resolver_parameters = {"test": object()}

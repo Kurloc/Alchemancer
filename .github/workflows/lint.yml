@@ -1,0 +1,24 @@
+name: Lint PR Files
+
+on:
+  pull_request:
+
+jobs:
+  run_tests:
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.11-slim-bullseye
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install project deps
+      run: |
+        pip install -e .
+        pip install pre-commit
+        pre-commit install
+
+    - name: Run Tests
+      run: |
+        files_changed=`$(git diff --name-only origin/${{ github.base_ref }}...${{ github.head_ref }} | xargs || echo "")`;
+        echo $files_changed | xargs python3 -m pre_commit run --color=always --files;
