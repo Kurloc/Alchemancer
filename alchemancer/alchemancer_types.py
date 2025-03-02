@@ -1,3 +1,4 @@
+from abc import ABCMeta
 from typing import TypedDict, Literal, NotRequired, List, Union, Dict, Any, Optional, Self
 
 from sqlalchemy import (
@@ -59,8 +60,6 @@ class HqlSelect(TypedDict):
     value: NotRequired[ValueTypesT]
     whens: NotRequired[List[HqlWhenThen]]
     else_: NotRequired["HqlSelect"]
-    # select: NotRequired[Union[str, Dict[str, "HqlSelect"]]]
-    # where: NotRequired[WhereClausT]
 
 
 class HqlJoin(TypedDict):
@@ -79,8 +78,12 @@ class HqlQuery(TypedDict):
     group_by: NotRequired[List[str]]
     distinct: NotRequired[bool]
     subqueries: NotRequired[Dict[str, Self]]
+    cte: NotRequired["HqlCTE"]
     debug: NotRequired[Literal["html", "str"]]
 
+
+class HqlCTE(HqlQuery):
+    pass
 
 class GeneratedQuery:
     query: Select
@@ -104,3 +107,7 @@ class NoOpConnection(Connection):
         execution_options: Optional[CoreExecuteOptionsParameter] = None,
     ) -> CursorResult[Any]:
         pass
+
+
+class JsonPlugin(ABCMeta):
+    sqlalchemy_functions: Dict[str, Any]

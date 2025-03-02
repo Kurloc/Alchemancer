@@ -39,7 +39,7 @@ SELECT DISTINCT user_account.id,
                 case when :param_1 then :param_2
                      when :param_3 then :param_4
                      when :param_5 then user_account.id
-                     else user_account.id end as anon_1
+                     else user_account.id end as email
 FROM   user_account
 WHERE  (user_account.id = :id_1
     or user_account.id = :id_2

@@ -1,9 +1,10 @@
 import os
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict
 
 import pytest
 from sql_formatter.core import format_sql
+from sqlalchemy.dialects.postgresql import aggregate_order_by
 
 from alchemancer.sqlalchemy.query_generator import QueryGenerator
 from alchemancer.sqlalchemy.reflection_handler import ReflectionHandler
@@ -42,7 +43,7 @@ test_cases = [(x['name'], x) for x in ReflectionHandler._import_modules_from_pat
 
 @pytest.mark.parametrize("name,test_dict", test_cases)
 def test_query(name, test_dict: Dict):
-    query = QueryGenerator(psql_engine)._process_query(test_dict['query'])
+    query = QueryGenerator(psql_engine, {'aggregate_order_by': aggregate_order_by})._process_query(test_dict['query'])
     print()
     print('TEST', name)
     print('EXPECTED', '\n', format_sql(test_dict['expected_sql']), '\n')
