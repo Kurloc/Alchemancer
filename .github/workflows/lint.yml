@@ -21,4 +21,5 @@ jobs:
     - name: Run Tests
       run: |
         files_changed=`$(git diff --name-only origin/${{ github.base_ref }}...${{ github.head_ref }} | xargs || echo "")`;
+        echo "files_changed: $files_changed"
         echo $files_changed | xargs python3 -m pre_commit run --color=always --files;
