@@ -1,1 +1,1 @@
-from marshmallow.fields import Field  # noqa
+from marshmallow.fields import Field  # noqa: F401
