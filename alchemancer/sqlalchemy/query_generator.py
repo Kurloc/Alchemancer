@@ -182,23 +182,30 @@ class QueryGenerator:
         union_all: bool,
         connection: Optional[Connection] = NoOpConnection,
     ):
+        # run the left side of the query and throw it into the context for referencing by name
         processed_left = self._process_query(
             union["left"], context_dict, connection
         ).query
         context_dict[union["left"]["alias"]] = processed_left
+
+        # run the right side of the query, then apply the union on it and the cte if needed
         processed_right = self._process_query(
             union["right"], context_dict, connection
         ).query
+
         if union_all:
             union_query = processed_left.union_all(processed_right)
         else:
             union_query = processed_left.union(processed_right)
+
         union_cte = union.get("cte")
         if union_cte:
             union_query = union_query.cte(
                 name=union_cte["name"], recursive=union_cte.get("recursive", False)
             )
             context_dict[union_cte["name"]] = union_query
+
+        # Everything should be in the context under it's alias, now we can reference the items in the rest of the query
         context_dict[union["name"]] = union_query
 
     def _process_sub_queries(
