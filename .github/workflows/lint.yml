@@ -6,9 +6,6 @@ on:
 jobs:
   run_pre_commit:
     runs-on: ubuntu-latest
-    container:
-      image: python:3.11-slim-bullseye
-
     steps:
     - uses: actions/checkout@v4
       with:
