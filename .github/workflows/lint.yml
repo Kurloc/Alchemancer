@@ -17,6 +17,7 @@ jobs:
         pip install -e .
         pip install pre-commit
         pre-commit install
+      shell: bash
 
     - name: Run Tests
       run: |
@@ -28,4 +29,5 @@ jobs:
         fi
 
         echo "files_changed: $files_changed"
-#        echo $files_changed | xargs python3 -m pre_commit run --color=always --files;
+        echo $files_changed | xargs python3 -m pre_commit run --color=always --files;
+      shell: bash
