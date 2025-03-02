@@ -67,10 +67,6 @@ class HqlJoin(TypedDict):
     where: WhereClausT
 
 
-class HqlCTE("HqlQuery"):
-    pass
-
-
 class HqlQuery(TypedDict):
     select: Dict[str, Dict[str, HqlSelect]]
     joins: NotRequired[Dict[str, HqlJoin]]
@@ -82,9 +78,12 @@ class HqlQuery(TypedDict):
     group_by: NotRequired[List[str]]
     distinct: NotRequired[bool]
     subqueries: NotRequired[Dict[str, Self]]
-    cte: NotRequired[HqlCTE]
+    cte: NotRequired["HqlCTE"]
     debug: NotRequired[Literal["html", "str"]]
 
+
+class HqlCTE(HqlQuery):
+    pass
 
 class GeneratedQuery:
     query: Select
