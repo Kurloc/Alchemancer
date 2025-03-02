@@ -37,7 +37,7 @@ jobs:
           echo "$files_changed"
         fi
         
-        files_changed=`$files_changed | xargs || echo ''`
+        files_changed=`echo "$files_changed" | xargs || echo ''`
 
         echo "files_changed: $files_changed"
         echo $files_changed | xargs python3 -m pre_commit run --color=always --files;
