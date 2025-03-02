@@ -23,6 +23,9 @@ from alchemancer.alchemancer_types import (
     ColumnListT,
     GeneratedQuery,
     NoOpConnection,
+    HqlUnion,
+    PrimitiveT,
+    ColumnTypesT,
 )
 from alchemancer.sqlalchemy.reflection_handler import (
     ReflectionHandler,
@@ -38,7 +41,7 @@ class QueryGenerator:
         self.base_context_dict = {
             "array_agg": array_agg,
             "coalesce": coalesce,
-            **(base_context_dict or {})
+            **(base_context_dict or {}),
         }
         self._engine = engine
 
@@ -75,7 +78,7 @@ class QueryGenerator:
         query: HqlQuery,
         context_dict: Optional[Dict] = None,
         connection: Optional[Connection] = NoOpConnection,
-    ):
+    ) -> GeneratedQuery:
         selected_join_columns, join_conditions = None, None
         context_dict = context_dict or {**self.base_context_dict}
 
@@ -89,12 +92,20 @@ class QueryGenerator:
         group_by = query.get("group_by")
         distinct = query.get("distinct")
         subqueries = query.get("subqueries")
+        cte = query.get("cte")
+        union: HqlUnion | None = query.get("union", None) or query.get("union_all")
+        union_all = "union_all" in query
+
+        if union:
+            self._process_union(context_dict, union, union_all, connection)
 
         if subqueries:
             self._process_sub_queries(subqueries, context_dict, connection)
 
         if joins:
-            selected_join_columns, join_conditions = self._process_joins(joins, context_dict)
+            selected_join_columns, join_conditions = self._process_joins(
+                joins, context_dict
+            )
 
         query = self._process_selects(
             select, context_dict, selected_join_columns, join_conditions
@@ -115,45 +126,87 @@ class QueryGenerator:
             query = query.distinct()
 
         if group_by:
-            group_by_columns = []
-            for column in group_by:
-                split_key = column.split(".")
-                model_name = split_key[0]
-                field_name = split_key[1]
-                group_by_columns.append(
-                    self.reflection_handler.model_field_cache[model_name][field_name]
-                )
-
-            query = query.group_by(*group_by_columns)
+            query = self._process_group_by(group_by, query)
 
         if order_by:
-            order_by_columns = {}
-            for column in order_by:
-                value = order_by[column]
-                split_key = column.split(".")
-                model_name = split_key[0]
-                field_name = split_key[1]
-                if value["dir"] == "desc":
-                    order_by_columns[value["index"]] = (
-                        self.reflection_handler.model_field_cache[model_name][
-                            field_name
-                        ].desc()
-                    )
-                else:
-                    order_by_columns[value["index"]] = (
-                        self.reflection_handler.model_field_cache[model_name][
-                            field_name
-                        ].asc()
-                    )
+            query = self._process_order_by(order_by, query)
 
-            order_by_array = []
-            keys_len = len(order_by_columns)
-            for idx in range(keys_len):
-                order_by_array.append(order_by_columns[idx])
-
-            query = query.order_by(*order_by_array)
+        if cte:
+            query = query.cte(name=cte["name"], recursive=cte.get("recursive", False))
+            context_dict[cte["name"]] = query
 
         return GeneratedQuery(query, limit, offset)
+
+    def _process_group_by(self, group_by, query):
+        group_by_columns = []
+        for column in group_by:
+            split_key = column.split(".")
+            model_name = split_key[0]
+            field_name = split_key[1]
+            group_by_columns.append(
+                self.reflection_handler.model_field_cache[model_name][field_name]
+            )
+        query = query.group_by(*group_by_columns)
+        return query
+
+    def _process_order_by(self, order_by, query):
+        order_by_columns = {}
+        for column in order_by:
+            value = order_by[column]
+            split_key = column.split(".")
+            model_name = split_key[0]
+            field_name = split_key[1]
+            if value["dir"] == "desc":
+                order_by_columns[value["index"]] = (
+                    self.reflection_handler.model_field_cache[model_name][
+                        field_name
+                    ].desc()
+                )
+            else:
+                order_by_columns[value["index"]] = (
+                    self.reflection_handler.model_field_cache[model_name][
+                        field_name
+                    ].asc()
+                )
+        order_by_array = []
+        keys_len = len(order_by_columns)
+        for idx in range(keys_len):
+            order_by_array.append(order_by_columns[idx])
+        query = query.order_by(*order_by_array)
+        return query
+
+    def _process_union(
+        self,
+        context_dict: Dict,
+        union: HqlUnion,
+        union_all: bool,
+        connection: Optional[Connection] = NoOpConnection,
+    ):
+        # run the left side of the query and throw it into the context for referencing by name
+        processed_left = self._process_query(
+            union["left"], context_dict, connection
+        ).query
+        context_dict[union["left"]["alias"]] = processed_left
+
+        # run the right side of the query, then apply the union on it and the cte if needed
+        processed_right = self._process_query(
+            union["right"], context_dict, connection
+        ).query
+
+        if union_all:
+            union_query = processed_left.union_all(processed_right)
+        else:
+            union_query = processed_left.union(processed_right)
+
+        union_cte = union.get("cte")
+        if union_cte:
+            union_query = union_query.cte(
+                name=union_cte["name"], recursive=union_cte.get("recursive", False)
+            )
+            context_dict[union_cte["name"]] = union_query
+
+        # Everything should be in the context under it's alias, now we can reference the items in the rest of the query
+        context_dict[union["name"]] = union_query
 
     def _process_sub_queries(
         self,
@@ -177,10 +230,10 @@ class QueryGenerator:
         self,
         select: Dict[str, Dict[str, HqlSelect]],
         context_dict: Dict,
-        join_columns: Optional[List[ColumnListT]] = None,
-        joins_conditions: Optional[
-            List[Tuple[Type[DeclarativeBase], List[_ColumnExpressionArgument[bool]]]]
-        ] = None,
+        join_columns: List[ColumnListT],
+        joins_conditions: List[
+            Tuple[Type[DeclarativeBase], List[_ColumnExpressionArgument[bool]]]
+        ],
     ):
         models = []
         select_columns = []
@@ -189,7 +242,7 @@ class QueryGenerator:
                 model_key, None
             )
             if model_or_subquery is None:
-                model_or_subquery = context_dict.get("subqueries", {}).get(
+                model_or_subquery = context_dict.get("subqueries", context_dict).get(
                     model_key, None
                 )
 
@@ -205,18 +258,24 @@ class QueryGenerator:
                 else_ = column_info.get("else_", None)
 
                 if else_ is not None:
-                    else_ = self._return_value_from_hql_select_or_string(else_, context_dict)
+                    else_ = self._return_value_from_hql_select_or_string(
+                        else_, context_dict
+                    )
 
                 if when_thens := column_info.get("whens", []):
                     when_then_conditions = []
                     for when_item in when_thens:
-                        when = self._process_where_clause(when_item["when"], context_dict)
+                        when = self._process_where_clause(
+                            when_item["when"], context_dict
+                        )
                         then = self._return_value_from_hql_select_or_string(
                             when_item["then"], context_dict
                         )
                         when_then_conditions.append((when, then))
 
-                    select_column = case(*when_then_conditions, else_=else_).label(label_name or column_key)
+                    select_column = case(*when_then_conditions, else_=else_).label(
+                        label_name or column_key
+                    )
                     if is_distinct:
                         select_column = select_column.distinct()
 
@@ -263,7 +322,9 @@ class QueryGenerator:
                 value = where[key]
                 or_clause_input = []
                 for or_dict in value:
-                    or_clause_input.extend(self._process_where_clause(or_dict, context_dict))
+                    or_clause_input.extend(
+                        self._process_where_clause(or_dict, context_dict)
+                    )
 
                 clauses.append(or_(*or_clause_input))
             else:
@@ -275,9 +336,9 @@ class QueryGenerator:
                     model_name, None
                 )
                 if model_or_subquery is None:
-                    model_or_subquery = context_dict.get("subqueries", {}).get(
-                        model_name, None
-                    )
+                    model_or_subquery = context_dict.get(
+                        "subqueries", context_dict
+                    ).get(model_name, None)
                     is_subquery = model_or_subquery is not None
 
                 if model_or_subquery is None:
@@ -287,13 +348,15 @@ class QueryGenerator:
                     column = getattr(model_or_subquery.c, field_name)
                 else:
                     column = self.reflection_handler.model_field_cache[model_name][
-                            field_name
+                        field_name
                     ]
 
                 clauses.append(
                     operation(
                         column,
-                        self._return_value_from_hql_select_or_string(where[key], context_dict),
+                        self._return_value_from_hql_select_or_string(
+                            where[key], context_dict
+                        ),
                     )
                 )
 
@@ -308,7 +371,9 @@ class QueryGenerator:
         for join_key in joins.keys():
             columns = joins[join_key].get("select")
             model = self.reflection_handler.model_class_cache[join_key]
-            where_clauses = self._process_where_clause(joins[join_key].get("where"), context_dict)
+            where_clauses = self._process_where_clause(
+                joins[join_key].get("where"), context_dict
+            )
             for column_key in columns.keys():
                 column_info = columns[column_key]
                 select_column = self.reflection_handler.model_field_cache[join_key][
@@ -329,52 +394,77 @@ class QueryGenerator:
 
         return select_columns, joins_to_return
 
-    def _build_ast_tokens(
+    def _convert_ast_to_sqlalchemy_column(
         self, functional_column: str, context: Dict, model_key: Optional[str] = None
-    ) -> Any:  # For now the return type is any but this honestly only returns sql alchemy columns / selects
+    ) -> Select | ColumnTypesT | PrimitiveT:
+        # For now the return type is any but this honestly only returns sql alchemy columns / selects
         tokens = ast.parse(functional_column)
         for body in tokens.body:
-            return self.type_monster(body.value, context, model_key)
+            return self._ast_switch(body.value, context, model_key)
 
-    def type_monster(self, value, context: Dict, model_key: Optional[str] = None):
+    def _ast_switch(self, value, context: Dict, model_key: Optional[str] = None):
         match type(value):
             case ast.Name:
                 value = cast(ast.Name, value)
-                return self.process_name(value, context, model_key)
+                return self._process_name(value, context, model_key)
             case ast.Constant:
                 value = cast(ast.Constant, value)
-                return self.process_constant(value, context, model_key)
+                return self._process_constant(value, context, model_key)
             case ast.Call:
                 value = cast(ast.Call, value)
-                return self.process_call(value, context, model_key)
+                return self._process_call(value, context, model_key)
             case ast.Attribute:
                 value = cast(ast.Attribute, value)
-                return self.process_attribute(value, context, model_key)
+                return self._process_attribute(value, context, model_key)
+            case ast.keyword:
+                value = cast(ast.keyword, value)
+                return self._process_keyword(value, context, model_key)
 
-        raise Exception('ooof not implemented', value, context)
+        raise Exception("ooof not implemented", value, context)
 
-    def process_name(self, name_obj: ast.Name, context: Dict, model_key: Optional[str] = None):
-        x = (
-                context.get(name_obj.id)
+    def _process_name(
+        self, name_obj: ast.Name, context: Dict, model_key: Optional[str] = None
+    ):
+        value = (
+            context.get(name_obj.id)
             or self.reflection_handler.model_class_cache.get(name_obj.id)
-            or self.reflection_handler.model_field_cache.get(model_key, {}).get(name_obj.id)
+            or self.reflection_handler.model_field_cache.get(model_key, {}).get(
+                name_obj.id
+            )
         )
-        if x is None and name_obj.id.lower() not in ['none', 'null']:
-            raise Exception('Could not find', name_obj.id)
-        return x
+        if value is None and name_obj.id.lower() not in ["none", "null"]:
+            raise Exception("Could not find", name_obj.id)
 
-    def process_constant(self, constant_obj: ast.Constant, context: Dict, model_key: Optional[str] = None):
-        return constant_obj.value
+        return value
 
-    def process_call(self, call_obj: ast.Call, context: Dict, model_key: Optional[str] = None):
-        processed_args = [self.type_monster(x, context, model_key) for x in call_obj.args]
-        processed_keywords = {x: self.type_monster(x, context, model_key) for x in call_obj.keywords}
-        processed_func =  self.type_monster(call_obj.func, context, model_key)
+    def _process_call(
+        self, call_obj: ast.Call, context: Dict, model_key: Optional[str] = None
+    ):
+        processed_args = [
+            self._ast_switch(x, context, model_key) for x in call_obj.args
+        ]
+        processed_keywords = {
+            z[0]: z[1]
+            for z in [
+                self._ast_switch(x, context, model_key) for x in call_obj.keywords
+            ]
+        }
+        processed_func = self._ast_switch(call_obj.func, context, model_key)
         return processed_func(*processed_args, **processed_keywords)
 
-    def process_attribute(self, attribute_obj: ast.Attribute, context: Dict, model_key: Optional[str] = None):
-        parent = self.type_monster(attribute_obj.value, context, model_key)
+    def _process_attribute(
+        self,
+        attribute_obj: ast.Attribute,
+        context: Dict,
+        model_key: Optional[str] = None,
+    ):
+        parent = self._ast_switch(attribute_obj.value, context, model_key)
         return getattr(parent, attribute_obj.attr)
+
+    def _process_keyword(
+        self, keyword_obj: ast.keyword, context: Dict, model_key: Optional[str] = None
+    ):
+        return keyword_obj.arg, self._ast_switch(keyword_obj.value, context, model_key)
 
     def _return_value_from_hql_select_or_string(
         self,
@@ -385,7 +475,9 @@ class QueryGenerator:
     ) -> Any:
         if isinstance(select, str):
             if "(" in select and ")" in select:
-                return self._build_ast_tokens(select, context_dict, model_key)
+                return self._convert_ast_to_sqlalchemy_column(
+                    select, context_dict, model_key
+                )
             if "." not in select:
                 return select
 
@@ -400,10 +492,13 @@ class QueryGenerator:
                 return possible_value
             else:
                 return select
+
         elif isinstance(select, Dict):
             label = select.get("label", None)
             if "value" in select.keys():
-                value = self._return_value_from_hql_select_or_string(select.get("value"), context_dict)
+                value = self._return_value_from_hql_select_or_string(
+                    select.get("value"), context_dict
+                )
                 is_distinct = select.get("distinct", None) is not None
                 if label is not None:
                     value = value.label(label)
@@ -412,17 +507,25 @@ class QueryGenerator:
                 return value
 
             if "(" in column_name and ")" in column_name:
-                select = self._build_ast_tokens(column_name, context_dict, model_key)
+                select = self._convert_ast_to_sqlalchemy_column(
+                    column_name, context_dict, model_key
+                )
                 if label is not None:
                     select = select.label(label)
                 return select
 
-            if (model_obj := self.reflection_handler.model_field_cache.get(model_key, None)) is not None:
-                if '[' and ']' in column_name:
+            if (
+                model_obj := self.reflection_handler.model_field_cache.get(
+                    model_key, None
+                )
+            ) is not None:
+                if "[" and "]" in column_name:
                     split_items = column_name.split("[")
                     column_name = split_items[0]
                     select = model_obj[column_name]
-                    split = [x.replace("'", "").replace("]", "") for x in split_items[1:]]
+                    split = [
+                        x.replace("'", "").replace("]", "") for x in split_items[1:]
+                    ]
                     for item in split:
                         select = select[item]
                 else:
@@ -432,7 +535,7 @@ class QueryGenerator:
                     select = select.label(label)
                 return select
 
-            model_or_subquery = context_dict.get("subqueries", {}).get(
+            model_or_subquery = context_dict.get("subqueries", context_dict).get(
                 model_key, None
             )
             if model_or_subquery is not None:
@@ -442,6 +545,7 @@ class QueryGenerator:
                 return select
 
             raise Exception("Not implemented yet for type", type(select))
+
         elif type(select) in [
             int,
             str,
@@ -455,6 +559,12 @@ class QueryGenerator:
             return select
         else:
             raise Exception("Not implemented yet for type", type(select))
+
+    @staticmethod
+    def _process_constant(
+        constant_obj: ast.Constant, context: Dict, model_key: Optional[str] = None
+    ):
+        return constant_obj.value
 
     @staticmethod
     def _get_operation_from_action_name(operation: str):
@@ -497,7 +607,9 @@ class QueryGenerator:
             return
 
     @staticmethod
-    def _parse_column_name_and_operation_from_key(key: str) -> Tuple[str, str, Callable]:
+    def _parse_column_name_and_operation_from_key(
+        key: str,
+    ) -> Tuple[str, str, Callable]:
         key_split = key.split(".")
         model_name = key_split[0]
         action_split = key_split[1].split("__")

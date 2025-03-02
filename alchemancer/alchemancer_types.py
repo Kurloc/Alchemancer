@@ -1,5 +1,15 @@
 from abc import ABCMeta
-from typing import TypedDict, Literal, NotRequired, List, Union, Dict, Any, Optional, Self
+from typing import (
+    TypedDict,
+    Literal,
+    NotRequired,
+    List,
+    Union,
+    Dict,
+    Any,
+    Optional,
+    Self,
+)
 
 from sqlalchemy import (
     Column,
@@ -27,8 +37,10 @@ ColumnTypesT = Union[
 ColumnListT = List[ColumnTypesT]
 ValueTypesT = Union[
     Dict[
-        str, any
-    ],  # let's see if this can be slimmed down from ANY to a recursive typing maybe?
+        str,
+        # let's see if this can be slimmed down from ANY to a recursive typing maybe?
+        any,
+    ],
     int,
     str,
     float,
@@ -38,6 +50,32 @@ ValueTypesT = Union[
     List[float],
     List[bool],
     "HqlSelect",
+]
+PrimitiveT = Union[
+    int,
+    str,
+    float,
+    bool,
+    List[str],
+    List[int],
+    List[float],
+    List[bool],
+    Dict[str, str],
+    Dict[str, int],
+    Dict[str, float],
+    Dict[str, bool],
+    Dict[bool, bool],
+    Dict[bool, str],
+    Dict[bool, int],
+    Dict[bool, float],
+    Dict[int, bool],
+    Dict[int, str],
+    Dict[int, int],
+    Dict[int, float],
+    Dict[float, bool],
+    Dict[float, str],
+    Dict[float, int],
+    Dict[float, float],
 ]
 
 WhereClausT = Dict[str, ValueTypesT]
@@ -67,6 +105,18 @@ class HqlJoin(TypedDict):
     where: WhereClausT
 
 
+class HqlCTE(TypedDict):
+    name: str
+    recursive: NotRequired[bool]
+
+
+class HqlUnion(TypedDict):
+    name: str
+    left: "HqlQuery"
+    right: "HqlQuery"
+    cte: HqlCTE
+
+
 class HqlQuery(TypedDict):
     select: Dict[str, Dict[str, HqlSelect]]
     joins: NotRequired[Dict[str, HqlJoin]]
@@ -78,12 +128,12 @@ class HqlQuery(TypedDict):
     group_by: NotRequired[List[str]]
     distinct: NotRequired[bool]
     subqueries: NotRequired[Dict[str, Self]]
-    cte: NotRequired["HqlCTE"]
+    cte: NotRequired[HqlCTE]
+    union: NotRequired[HqlUnion]
+    union_all: NotRequired[HqlUnion]
+    alias: NotRequired[str]
     debug: NotRequired[Literal["html", "str"]]
 
-
-class HqlCTE(HqlQuery):
-    pass
 
 class GeneratedQuery:
     query: Select
