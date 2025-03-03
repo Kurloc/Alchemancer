@@ -2,9 +2,9 @@ import sys
 from abc import ABCMeta
 
 if sys.version_info[1] < 11:
-    from typing_extensions import NotRequired
+    from typing_extensions import NotRequired, Self
 else:
-    from typing import NotRequired
+    from typing import NotRequired, Self
 
 from typing import (
     Any,
@@ -12,7 +12,6 @@ from typing import (
     List,
     Literal,
     Optional,
-    Self,
     TypedDict,
     Union,
 )
