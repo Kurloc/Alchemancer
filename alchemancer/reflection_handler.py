@@ -60,7 +60,6 @@ class ReflectionHandler:
 
         ReflectionHandler.resolver_name_type_cache = {}
         for resolver in resolver_classes:
-            print("resolver.name:", resolver().name, resolver)
             ReflectionHandler.resolver_name_type_cache[resolver().name] = resolver
 
         model_classes = []
