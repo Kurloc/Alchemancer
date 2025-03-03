@@ -1,6 +1,7 @@
 import sys
 from abc import ABCMeta
 
+# if python_version < 3.11
 if sys.version_info[1] < 11:
     from typing_extensions import NotRequired, Self
 else:
