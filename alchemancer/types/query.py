@@ -126,6 +126,7 @@ class HqlQuery(TypedDict):
     cte: NotRequired[HqlCTE]
     union: NotRequired[HqlUnion]
     union_all: NotRequired[HqlUnion]
+    resolver_args: NotRequired[Dict[str, PrimitiveT]]
     alias: NotRequired[str]
     debug: NotRequired[Literal["html", "str"]]
 

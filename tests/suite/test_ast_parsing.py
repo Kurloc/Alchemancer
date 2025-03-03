@@ -1,11 +1,11 @@
 import os
 from pathlib import Path
 
-from ast_handler import AstHandler
-from reflection_handler import ReflectionHandler
 from sqlalchemy.dialects.postgresql import aggregate_order_by
 from sqlalchemy.sql.functions import array_agg, coalesce, func
 
+from alchemancer.ast_handler import AstHandler
+from alchemancer.reflection_handler import ReflectionHandler
 from tests.fixtures.models.user import User
 
 handler = ReflectionHandler().init(
@@ -94,17 +94,13 @@ def test_ast_field_method_no_params():
 
 def test_ast_function_no_params():
     assert str(coalesce()) == str(
-        AstHandler().convert_ast_to_sqlalchemy_column(
-            "coalesce()", {"coalesce": coalesce}
-        )
+        AstHandler().convert_ast_to_sqlalchemy_column("coalesce()", {"coalesce": coalesce})
     )
 
 
 def test_ast_function_params():
     assert str(coalesce(1, 0)) == str(
-        AstHandler().convert_ast_to_sqlalchemy_column(
-            "coalesce(1, 0)", {"coalesce": coalesce}
-        )
+        AstHandler().convert_ast_to_sqlalchemy_column("coalesce(1, 0)", {"coalesce": coalesce})
     )
 
 

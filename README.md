@@ -1,10 +1,12 @@
 TODO:
 
 1) ~~SubQueries~~
-    1) Basic support has been implemented
+   1) ~~Basic support has been implemented~~
+   2) Need more tests 
 2) ~~CTEs~~
-3) Resolvers
-    1) Need to evaluate path forward, Temp tables VS literal subqueries
+3) ~~Resolvers~~
+   1) ~~Need to evaluate path forward, Temp tables VS literal subqueries~~
+   2) Went with temp tables, implemented basic version, we can always do the other one if we need it. 
 4) Plugin systems
    1) Plugin is a bit of a misnomer here, this is more of a module system. 
 There are configurable slots and you can plugin in modules to the slots, this is more for core maintainers of Alchemancer 

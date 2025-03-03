@@ -1,11 +1,11 @@
 import ast
 from typing import Any, Callable, Dict, Optional, Tuple, cast
 
-from reflection_handler import (
-    ReflectionHandler,
-)
 from sqlalchemy import Select
 
+from alchemancer.reflection_handler import (
+    ReflectionHandler,
+)
 from alchemancer.types.query import (
     ColumnTypesT,
 )
@@ -52,32 +52,22 @@ class AstHandler:
 
         raise NotImplementedError(f"Not implemented: {value}")
 
-    def _process_name(
-        self, name_obj: ast.Name, context: Dict, model_key: Optional[str] = None
-    ):
+    def _process_name(self, name_obj: ast.Name, context: Dict, model_key: Optional[str] = None):
         value = (
             context.get(name_obj.id)
             or self.reflection_handler.model_class_cache.get(name_obj.id)
-            or self.reflection_handler.model_field_cache.get(model_key, {}).get(
-                name_obj.id
-            )
+            or self.reflection_handler.model_field_cache.get(model_key, {}).get(name_obj.id)
         )
         if value is None and name_obj.id.lower() not in ["none", "null"]:
             raise Exception("Could not find", name_obj.id)
 
         return value
 
-    def _process_call(
-        self, call_obj: ast.Call, context: Dict, model_key: Optional[str] = None
-    ):
-        processed_args = [
-            self._ast_switch(x, context, model_key) for x in call_obj.args
-        ]
+    def _process_call(self, call_obj: ast.Call, context: Dict, model_key: Optional[str] = None):
+        processed_args = [self._ast_switch(x, context, model_key) for x in call_obj.args]
         processed_keywords = {
             z[0]: z[1]
-            for z in [
-                self._ast_switch(x, context, model_key) for x in call_obj.keywords
-            ]
+            for z in [self._ast_switch(x, context, model_key) for x in call_obj.keywords]
         }
         processed_func: Callable = self._ast_switch(call_obj.func, context, model_key)
         return processed_func(*processed_args, **processed_keywords)
