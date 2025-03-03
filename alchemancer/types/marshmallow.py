@@ -7,9 +7,7 @@ from alchemancer import Field
 class JsonBField(Field):
     field = "TESTING!"
 
-    def _serialize(
-        self, value: typing.Any, attr: str | None, obj: typing.Any, **kwargs
-    ):
+    def _serialize(self, value: typing.Any, attr: str | None, obj: typing.Any, **kwargs):
         if value is None:
             return None
 
@@ -38,9 +36,7 @@ class JsonBField(Field):
 
 
 class JsonField(Field):
-    def _serialize(
-        self, value: typing.Any, attr: str | None, obj: typing.Any, **kwargs
-    ):
+    def _serialize(self, value: typing.Any, attr: str | None, obj: typing.Any, **kwargs):
         if value is None:
             return None
 
