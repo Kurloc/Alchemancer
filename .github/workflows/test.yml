@@ -9,6 +9,6 @@ jobs:
     strategy:
       matrix:
         version: ['3.10', '3.10', '3.12', '3.13']
-    uses: .github/workflows/test-base.yml@main
+    uses: .github/workflows/test-base.yml
     with:
-      version: ${{ matrix.version }}
+      python-version: ${{ matrix.version }}
