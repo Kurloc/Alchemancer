@@ -3,7 +3,6 @@ from typing import Any, Dict, List
 from sqlalchemy import Column, Integer, Select, String, or_, select
 
 from alchemancer.types.resolver import HqlResolver, HqlResolverParameter
-from tests.fixtures.models.role import Role
 
 
 class RecursiveRolesResolver(HqlResolver):
@@ -37,24 +36,37 @@ class RecursiveRolesResolver(HqlResolver):
     def _execute_hook(self, **kwargs) -> Select:
         role_id = kwargs.get("role_id")
 
-        cte = select(
+        cte_base = select(
             self.table.c.role_id,
             self.table.c.role_name,
             self.table.c.role_parent_id,
-        )
-        union_cte = cte.union_all(
-            select(
-                cte.c.role_id.label("role_id"),
-                cte.c.role_name.label("role_name"),
-                Role.id.label("role_parent_id"),
+        ).filter(
+            or_(
+                self.table.c.role_id == role_id,
+                self.table.c.role_parent_id == role_id,
             )
-            .join(Role, Role.id == cte.c.role_parent_id)
-            .filter(
-                or_(
-                    cte.c.role_id == role_id,
-                    cte.c.role_parent_id == role_id,
-                )
+        )
+
+        union_cte = cte_base.union_all(
+            select(
+                cte_base.c.role_id.label("role_id"),
+                cte_base.c.role_name.label("role_name"),
+                self.table.c.role_id.label("role_parent_id"),
+            ).join(
+                self.table,
+                self.table.c.role_id == cte_base.c.role_parent_id,
             )
         ).cte(recursive=True, name="roles_base_cte")
 
-        return select(union_cte.columns)
+        query = select(
+            union_cte.c.role_id,
+            union_cte.c.role_name,
+            union_cte.c.role_parent_id,
+        )
+
+        return query.filter(
+            or_(
+                query.c.role_id == role_id,
+                query.c.role_parent_id == role_id,
+            )
+        ).distinct()

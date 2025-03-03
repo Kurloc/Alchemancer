@@ -11,21 +11,31 @@ test_query = {
         "resolver_args": {"role_id": 1},
     },
     "expected_sql": """
-WITH RECURSIVE roles_base_cte(role_id, role_name, role_parent_id) AS
-                   (SELECT "TEMP__ALCHEMANCER_TYPES_RESOLVER".role_id        AS role_id,
-                           "TEMP__ALCHEMANCER_TYPES_RESOLVER".role_name      AS role_name,
-                           "TEMP__ALCHEMANCER_TYPES_RESOLVER".role_parent_id AS role_parent_id
-                    FROM "TEMP__ALCHEMANCER_TYPES_RESOLVER"
-                    UNION ALL
-                    SELECT anon_1.role_id AS role_id, anon_1.role_name AS role_name, role.id AS role_parent_id
-                    FROM (SELECT "TEMP__ALCHEMANCER_TYPES_RESOLVER".role_id        AS role_id,
-                                 "TEMP__ALCHEMANCER_TYPES_RESOLVER".role_name      AS role_name,
-                                 "TEMP__ALCHEMANCER_TYPES_RESOLVER".role_parent_id AS role_parent_id
-                          FROM "TEMP__ALCHEMANCER_TYPES_RESOLVER") AS anon_1
-                             JOIN role ON role.id = anon_1.role_parent_id
-                    WHERE anon_1.role_id = :role_id_1
-                       OR anon_1.role_parent_id = :role_parent_id_1)
-SELECT roles_base_cte.role_id, roles_base_cte.role_name, roles_base_cte.role_parent_id
-FROM roles_base_cte
+with recursive roles_base_cte(role_id, role_name, role_parent_id) as (SELECT "TEMP__ALCHEMANCER_TYPES_RESOLVER".role_id as role_id,
+                                                                             "TEMP__ALCHEMANCER_TYPES_RESOLVER".role_name as role_name,
+                                                                             "TEMP__ALCHEMANCER_TYPES_RESOLVER".role_parent_id as role_parent_id
+                                                                      FROM   "TEMP__ALCHEMANCER_TYPES_RESOLVER"
+                                                                      WHERE  "TEMP__ALCHEMANCER_TYPES_RESOLVER".role_id = :role_id_1
+                                                                          or "TEMP__ALCHEMANCER_TYPES_RESOLVER".role_parent_id = :role_parent_id_1
+                                                                      UNION all
+SELECT anon_1.role_id as role_id,
+                                                                             anon_1.role_name as role_name,
+                                                                             "TEMP__ALCHEMANCER_TYPES_RESOLVER".role_id as role_parent_id
+                                                                      FROM   (SELECT "TEMP__ALCHEMANCER_TYPES_RESOLVER".role_id as role_id,
+                                                                                     "TEMP__ALCHEMANCER_TYPES_RESOLVER".role_name as role_name,
+                                                                                     "TEMP__ALCHEMANCER_TYPES_RESOLVER".role_parent_id as role_parent_id
+                                                                              FROM   "TEMP__ALCHEMANCER_TYPES_RESOLVER"
+                                                                              WHERE  "TEMP__ALCHEMANCER_TYPES_RESOLVER".role_id = :role_id_1
+                                                                                  or "TEMP__ALCHEMANCER_TYPES_RESOLVER".role_parent_id = :role_parent_id_1) as anon_1 join "TEMP__ALCHEMANCER_TYPES_RESOLVER"
+                                                                              ON "TEMP__ALCHEMANCER_TYPES_RESOLVER".role_id = anon_1.role_parent_id)
+SELECT DISTINCT roles_base_cte.role_id,
+                roles_base_cte.role_name,
+                roles_base_cte.role_parent_id
+FROM   roles_base_cte, (SELECT roles_base_cte.role_id as role_id,
+                               roles_base_cte.role_name as role_name,
+                               roles_base_cte.role_parent_id as role_parent_id
+                        FROM   roles_base_cte) as anon_2
+WHERE  anon_2.role_id = :role_id_2
+    or anon_2.role_parent_id = :role_parent_id_2
     """,
 }
