@@ -76,6 +76,7 @@ class HqlResolver(metaclass=ABCMeta):
             self._insert_data(**kwargs)
 
         # execute the users execute logic so we can get a query
+        self.__create_temp_table()
         self.__execution_query = self._execute_hook(**kwargs)
 
         return self.__execution_query
