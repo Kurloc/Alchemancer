@@ -2,18 +2,17 @@ import inspect
 import os
 import sys
 from pathlib import Path
-from typing import TypeVar, Union, List, Tuple, Type, Set, Dict
+from typing import Any, Dict, List, Set, Tuple, Type, TypeVar, Union, cast
 
-from marshmallow.fields import String, Float, Boolean, Integer
+from marshmallow.fields import Boolean, Float, Integer, String
 from sqlalchemy.orm import DeclarativeBase
 
-from alchemancer.alchemancer_types import ColumnTypesT
+from alchemancer.types.marshmallow import JsonBField, JsonField
+from alchemancer.types.query import ColumnTypesT
+from alchemancer.types.resolver import HqlResolver
 
 _module = TypeVar("_module", bound=str)
-_absolute_module_path = Union[
-    Path,
-    str
-]
+_absolute_module_path = Union[Path, str]
 
 
 class ReflectionHandler:
@@ -22,18 +21,22 @@ class ReflectionHandler:
     """
 
     model_class_cache: Dict[str, Type[DeclarativeBase]] = {}
-    model_field_cache: Dict[str, Type[ColumnTypesT]] = {}
+    model_field_cache: Dict[str, Dict[str, Type[ColumnTypesT]]] = {}
     python_primitive_types_to_marshmallow_fields = {
         int: Integer,
         float: Float,
         str: String,
         bool: Boolean,
-        dict: Dict
+        dict: Dict,
+        JsonBField: JsonBField,
+        JsonField: JsonBField,
     }
+    resolver_name_type_cache: Dict[str, Type[HqlResolver]] = {}
 
     @staticmethod
     def init(
-            model_dir_module_paths: List[Tuple[_module, _absolute_module_path]]
+        model_dir_module_paths: List[Tuple[_module, _absolute_module_path]],
+        resolver_dir_module_paths: List[Tuple[_module, _absolute_module_path]] = None,
     ):
         """
         Loads and imports modules using a list of module names and paths
@@ -43,30 +46,46 @@ class ReflectionHandler:
         :param model_dir_module_paths:
         :return:
         """
+        resolver_dir_module_paths = resolver_dir_module_paths or []
+
+        resolver_classes: List = []
+        for module_set in resolver_dir_module_paths:
+            resolver_classes.extend(
+                list(
+                    ReflectionHandler._import_modules_from_path(
+                        module_set[1], module_set[0], [HqlResolver]
+                    )
+                )
+            )
+
+        ReflectionHandler.resolver_name_type_cache = {}
+        for resolver in resolver_classes:
+            ReflectionHandler.resolver_name_type_cache[resolver().name] = resolver
+
         model_classes = []
         for module_set in model_dir_module_paths:
-            model_classes.extend(list(ReflectionHandler._import_modules_from_path(
-                module_set[1],
-                module_set[0]
-            )))
+            model_classes.extend(
+                list(ReflectionHandler._import_modules_from_path(module_set[1], module_set[0]))
+            )
+        model_classes = cast(List[Type[DeclarativeBase]], model_classes)
 
         for _class in model_classes:
             if hasattr(_class, "__table__"):
                 ReflectionHandler.model_class_cache[_class.__name__] = _class
                 ReflectionHandler.model_field_cache[_class.__name__] = {}
                 columns = _class.__table__.columns
-                for column in columns:
+                for _, column in columns.items():
                     ReflectionHandler.model_field_cache[_class.__name__][column.name] = column
 
     @staticmethod
     def _import_modules_from_path(
-            module_path: _absolute_module_path,
-            module_name: str,
-            types_to_import: List[Type] = None,
-            excluded_dir_names: List[str] = None,
-            check_subclasses_of_type: bool = True,
-            return_instances=False
-    ) -> Set[Type[DeclarativeBase]]:
+        module_path: _absolute_module_path,
+        module_name: str,
+        types_to_import: List[Type] = None,
+        excluded_dir_names: List[str] = None,
+        check_subclasses_of_type: bool = True,
+        return_instances=False,
+    ) -> Set[Type[Any]]:
         types_to_import = types_to_import or [DeclarativeBase]
         excluded_dir_names = excluded_dir_names or ["__pycache__"]
         class_set = set() if not return_instances else []
@@ -84,8 +103,7 @@ class ReflectionHandler:
 
             files_in_dir = os.listdir(dir_path)
             files_to_import_from = [
-                f[:-3] for f in files_in_dir
-                if f.endswith(".py") and f != "__init__.py"
+                f[:-3] for f in files_in_dir if f.endswith(".py") and f != "__init__.py"
             ]
 
             objects_to_possibly_import = []

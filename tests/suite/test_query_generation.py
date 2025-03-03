@@ -7,8 +7,9 @@ from sql_formatter.core import format_sql
 from sqlalchemy import func, over
 from sqlalchemy.dialects.postgresql import aggregate_order_by
 
-from alchemancer.sqlalchemy.query_generator import QueryGenerator
-from alchemancer.sqlalchemy.reflection_handler import ReflectionHandler
+from alchemancer.query_generator import QueryGenerator
+from alchemancer.reflection_handler import ReflectionHandler
+from examples.resolvers.roles_resolver import RecursiveRolesResolver
 from tests.fixtures.test_dbs import psql_engine
 
 ReflectionHandler().init(
@@ -16,11 +17,20 @@ ReflectionHandler().init(
         (
             "tests.fixtures.models",
             Path.joinpath(
-                (Path(__file__).parent.parent),  # suite dir  # tests dir
+                (Path(__file__).parent.parent),
                 f"fixtures{os.sep}models",
             ),
         )
-    ]
+    ],
+    [
+        (
+            "examples.resolvers",
+            Path.joinpath(
+                (Path(__file__).parent.parent.parent),
+                f"examples{os.sep}resolvers",
+            ),
+        )
+    ],
 )
 
 test_cases = [
@@ -29,7 +39,7 @@ test_cases = [
         str(
             Path.joinpath(
                 (Path(__file__).parent.parent.parent),  # suite dir  # tests dir
-                f"examples/queries",
+                "examples/queries",
             )
         ),
         "examples.queries",
@@ -42,6 +52,27 @@ test_cases = [
 
 @pytest.mark.parametrize("name,test_dict", test_cases)
 def test_query(name, test_dict: Dict):
+    print(RecursiveRolesResolver().name)
+    ReflectionHandler().init(
+        [
+            (
+                "tests.fixtures.models",
+                Path.joinpath(
+                    (Path(__file__).parent.parent),
+                    f"fixtures{os.sep}models",
+                ),
+            )
+        ],
+        [
+            (
+                "examples.resolvers",
+                Path.joinpath(
+                    (Path(__file__).parent.parent.parent),
+                    f"examples{os.sep}resolvers",
+                ),
+            )
+        ],
+    )
     expected_sql = test_dict["expected_sql"]
     query = QueryGenerator(
         psql_engine,

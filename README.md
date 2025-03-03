@@ -1,23 +1,25 @@
 TODO:
 
-1) SubQueries
-    1) Basic support has been implemented
-2) Resolvers
-    1) Need to evaluate path forward, Temp tables VS literal subqueries
-3) Plugin systems
+1) ~~SubQueries~~
+   1) ~~Basic support has been implemented~~
+   2) Need more tests 
+2) ~~CTEs~~
+3) ~~Resolvers~~
+   1) ~~Need to evaluate path forward, Temp tables VS literal subqueries~~
+   2) Went with temp tables, implemented basic version, we can always do the other one if we need it. 
+4) Plugin systems
    1) Plugin is a bit of a misnomer here, this is more of a module system. 
 There are configurable slots and you can plugin in modules to the slots, this is more for core maintainers of Alchemancer 
 than end users. We utilize this paradigm to enable support for like top level features that have 
 different underlying implementation details
    1) JSON query support
    2) Rule system to allow/deny access to fields based on user roles
-   3)  
-4) FastAPI example
-5) Django example
-6) Flask example
-7) Tutorials
-8) User Docs
-9) Implementer Docs
+5) FastAPI example
+6) Django example
+7) Flask example
+8) Tutorials
+9) User Docs
+10) Implementer Docs
 
 # Resolver Support
 
@@ -40,6 +42,17 @@ Required Features:
 | MySQL    | ✔    | 
 | MsSql    | ✔    |
 | Oracle   | ✔    |
+
+# Package structure
+```
+---> Core (alchemancer)
+|
+|------Postgres (alchemancer[postgres]) ----|---------- Flask
+|------Sqlite (alchemancer[sqlite]) --------|
+|------MySQL (alchemancer[mysql]) ----------|---------- Django
+|------MsSql (alchemancer[mssql]) ----------|
+|------Oracle (alchemancer[oracle]) --------|---------- FastAPI
+```
 
 ```mermaid
 flowchart TD

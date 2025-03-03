@@ -1,30 +1,23 @@
 from abc import ABCMeta
 from typing import (
-    TypedDict,
+    Any,
+    Dict,
+    List,
     Literal,
     NotRequired,
-    List,
-    Union,
-    Dict,
-    Any,
     Optional,
     Self,
+    TypedDict,
+    Union,
 )
 
-from sqlalchemy import (
-    Column,
-    ColumnElement,
-    Select,
-    Executable,
-    Connection,
-    CursorResult,
-)
+from sqlalchemy import Column, Connection, CursorResult, Executable, Select
 from sqlalchemy.engine.interfaces import (
     CoreExecuteOptionsParameter,
     _CoreAnyExecuteParams,
 )
 from sqlalchemy.orm import InstrumentedAttribute, RelationshipProperty
-from sqlalchemy.sql.elements import KeyedColumnElement
+from sqlalchemy.sql.elements import ColumnElement, KeyedColumnElement
 
 ColumnTypesT = Union[
     Column,
@@ -33,6 +26,7 @@ ColumnTypesT = Union[
     KeyedColumnElement,
     RelationshipProperty,
 ]
+
 
 ColumnListT = List[ColumnTypesT]
 ValueTypesT = Union[
@@ -81,6 +75,7 @@ PrimitiveT = Union[
 WhereClausT = Dict[str, ValueTypesT]
 
 
+# QUERY models
 class HqlSort(TypedDict):
     dir: Literal["asc", "desc"]
     index: int
@@ -131,10 +126,12 @@ class HqlQuery(TypedDict):
     cte: NotRequired[HqlCTE]
     union: NotRequired[HqlUnion]
     union_all: NotRequired[HqlUnion]
+    resolver_args: NotRequired[Dict[str, PrimitiveT]]
     alias: NotRequired[str]
     debug: NotRequired[Literal["html", "str"]]
 
 
+# Generator Models
 class GeneratedQuery:
     query: Select
     limit: Optional[int]
@@ -159,5 +156,5 @@ class NoOpConnection(Connection):
         pass
 
 
-class JsonPlugin(ABCMeta):
+class JsonPlugin(metaclass=ABCMeta):
     sqlalchemy_functions: Dict[str, Any]

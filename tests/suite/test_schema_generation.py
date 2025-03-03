@@ -1,17 +1,18 @@
 import os
 from pathlib import Path
-from typing import Dict, List, Tuple, Any
+from pprint import pprint
+from typing import Any, Dict, List, Tuple
 
 import pytest
-from sqlalchemy import insert, Engine, text, select
-from sqlalchemy_utils import database_exists, create_database
+from sqlalchemy import Engine, insert, select, text
+from sqlalchemy_utils import create_database, database_exists
 
-from alchemancer.sqlalchemy.query_generator import QueryGenerator
-from alchemancer.sqlalchemy.reflection_handler import ReflectionHandler
+from alchemancer.query_generator import QueryGenerator
+from alchemancer.reflection_handler import ReflectionHandler
 from tests.fixtures.models.base_model import BaseModel
 from tests.fixtures.models.role import Role
 from tests.fixtures.models.user import User
-from tests.fixtures.test_dbs import sqlite_engine, psql_engine
+from tests.fixtures.test_dbs import psql_engine, sqlite_engine
 
 if not database_exists(psql_engine.url):
     create_database(psql_engine.url)
@@ -36,8 +37,17 @@ ReflectionHandler().init(
                 Path(__file__).parent.parent,  # suite dir  # tests dir
                 f"fixtures{os.sep}models",
             ),
+        ),
+    ],
+    [
+        (
+            "examples.resolvers",
+            Path.joinpath(
+                (Path(__file__).parent.parent.parent),
+                f"examples{os.sep}resolvers",
+            ),
         )
-    ]
+    ],
 )
 
 test_cases = [
@@ -46,7 +56,7 @@ test_cases = [
         str(
             Path.joinpath(
                 (Path(__file__).parent.parent.parent),  # suite dir  # tests dir
-                f"examples/queries",
+                "examples/queries",
             )
         ),
         "examples.queries",
@@ -86,9 +96,7 @@ test_cases = [
         ),
     ],
 )
-def test_query(
-    name, test_dict: Dict, seed_data: List[Tuple[Any, Dict]], engine: Engine
-):
+def test_query(name, test_dict: Dict, seed_data: List[Tuple[Any, Dict]], engine: Engine):
     with engine.connect() as testing_connection:
         for d in seed_data:
             testing_connection.execute(insert(d[0]).values(**d[1]))
@@ -182,9 +190,7 @@ def test_cte():
     # query in sqlalchemy
     cte = select(Role.id, Role.name, Role.parent_role_id)
     union_cte = cte.union_all(
-        select(cte.c.id, cte.c.name, Role.id).join(
-            Role, Role.id == cte.c.parent_role_id
-        )
+        select(cte.c.id, cte.c.name, Role.id).join(Role, Role.id == cte.c.parent_role_id)
     ).cte(recursive=True, name="roles_base_cte")
 
     # query in json
@@ -275,3 +281,19 @@ def test_cte():
     #     print(users_over_100_with_a_in_name)
     #     results = testing_connection.execute(users_over_100_with_a_in_name)
     #     print(results.fetchall())
+
+
+def test_resolver_results():
+    query_results = QueryGenerator(psql_engine).return_from_hql_query(
+        {
+            "select": {
+                "RecursiveRolesResolver()": {
+                    "role_id": {},
+                    "role_name": {},
+                    "role_parent_id": {},
+                }
+            },
+            "resolver_args": {"role_id": 1},
+        }
+    )
+    pprint(query_results)

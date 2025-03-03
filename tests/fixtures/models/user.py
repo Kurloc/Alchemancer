@@ -1,7 +1,7 @@
-from typing import Optional, List, Dict
+from typing import List, Optional
 
-from sqlalchemy import String, ForeignKey, JSON, Column
-from sqlalchemy.orm import mapped_column, Mapped, relationship
+from sqlalchemy import JSON, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from tests.fixtures.models.base_model import BaseModel
 
@@ -22,10 +22,13 @@ class User(BaseModel):
     fullname: Mapped[Optional[str]]
     account_balance: Mapped[float] = mapped_column(default=0.0)
     addresses: Mapped[List["Address"]] = relationship(
-        back_populates="user",
-        cascade="all, delete-orphan"
+        back_populates="user", cascade="all, delete-orphan"
     )
-    account_details = mapped_column(JSON, default={"test": "123", "nested": {"inner_test":234}})
+    account_details = mapped_column(
+        JSON, default={"test": "123", "nested": {"inner_test": 234}}
+    )
+
+
 #
 # spongebob = User(
 #          name="spongebob",
