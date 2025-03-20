@@ -52,7 +52,7 @@ ReflectionHandler().init(
 
 test_cases = [
     (x["name"], x)
-    for x in ReflectionHandler._import_modules_from_path(
+    for x in ReflectionHandler._import_objects_from_modules_via_path(
         str(
             Path.joinpath(
                 (Path(__file__).parent.parent.parent),  # suite dir  # tests dir
@@ -60,7 +60,7 @@ test_cases = [
             )
         ),
         "examples.queries",
-        [dict],
+        dict,
         check_subclasses_of_type=False,
         return_instances=True,
     )
@@ -297,3 +297,9 @@ def test_resolver_results():
         }
     )
     pprint(query_results)
+    assert query_results == [
+        {"role_id": 3, "role_name": "3", "role_parent_id": 1},
+        {"role_id": 2, "role_name": "2", "role_parent_id": 1},
+        {"role_id": 4, "role_name": "4", "role_parent_id": 1},
+        {"role_id": 1, "role_name": "1", "role_parent_id": None},
+    ]
