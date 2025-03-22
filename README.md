@@ -47,7 +47,7 @@ Required Features:
 ```
 ---> Core (alchemancer)
 |
-|------Postgres (alchemancer[postgres]) ----|---------- Flask
+|------Postgres (alchemancer[postgres]) ----|---------- Flask (Pure Sqlalchemy)
 |------Sqlite (alchemancer[sqlite]) --------|
 |------MySQL (alchemancer[mysql]) ----------|---------- Django
 |------MsSql (alchemancer[mssql]) ----------|

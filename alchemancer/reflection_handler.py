@@ -2,7 +2,7 @@ import inspect
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Set, Tuple, Type, TypeVar, Union, cast
+from typing import Dict, List, Set, Tuple, Type, TypeVar, Union, cast
 
 from marshmallow.fields import Boolean, Float, Integer, String
 from sqlalchemy.orm import DeclarativeBase
@@ -11,6 +11,7 @@ from alchemancer.types.marshmallow import JsonBField, JsonField
 from alchemancer.types.query import ColumnTypesT
 from alchemancer.types.resolver import HqlResolver
 
+T = TypeVar("T")
 _module = TypeVar("_module", bound=str)
 _absolute_module_path = Union[Path, str]
 
@@ -43,6 +44,7 @@ class ReflectionHandler:
 
         This can be called multiple times consecutively if needed.
 
+        :param resolver_dir_module_paths:
         :param model_dir_module_paths:
         :return:
         """
@@ -52,8 +54,8 @@ class ReflectionHandler:
         for module_set in resolver_dir_module_paths:
             resolver_classes.extend(
                 list(
-                    ReflectionHandler._import_modules_from_path(
-                        module_set[1], module_set[0], [HqlResolver]
+                    ReflectionHandler._import_objects_from_modules_via_path(
+                        module_set[1], module_set[0], HqlResolver
                     )
                 )
             )
@@ -65,7 +67,11 @@ class ReflectionHandler:
         model_classes = []
         for module_set in model_dir_module_paths:
             model_classes.extend(
-                list(ReflectionHandler._import_modules_from_path(module_set[1], module_set[0]))
+                list(
+                    ReflectionHandler._import_objects_from_modules_via_path(
+                        module_set[1], module_set[0]
+                    )
+                )
             )
         model_classes = cast(List[Type[DeclarativeBase]], model_classes)
 
@@ -78,15 +84,15 @@ class ReflectionHandler:
                     ReflectionHandler.model_field_cache[_class.__name__][column.name] = column
 
     @staticmethod
-    def _import_modules_from_path(
+    def _import_objects_from_modules_via_path(
         module_path: _absolute_module_path,
         module_name: str,
-        types_to_import: List[Type] = None,
+        type_to_import: T = None,
         excluded_dir_names: List[str] = None,
         check_subclasses_of_type: bool = True,
         return_instances=False,
-    ) -> Set[Type[Any]]:
-        types_to_import = types_to_import or [DeclarativeBase]
+    ) -> Set[T]:
+        type_to_import = type_to_import or DeclarativeBase
         excluded_dir_names = excluded_dir_names or ["__pycache__"]
         class_set = set() if not return_instances else []
         module_path = os.path.abspath(module_path)
@@ -125,21 +131,25 @@ class ReflectionHandler:
                 if check_subclasses_of_type:
                     if hasattr(_object, "__mro__"):
                         base_classes = inspect.getmro(_object)[1:-1]
-                        for _type in types_to_import:
-                            if _type in base_classes:
-                                if not return_instances:
-                                    class_set.add(_object)
-                                    setattr(sys.modules[__name__], _type.__name__, _type)
-                                else:
-                                    class_set.append(_object)
-                else:
-                    for _type in types_to_import:
-                        if isinstance(_object, _type):
+                        if type_to_import in base_classes:
                             if not return_instances:
                                 class_set.add(_object)
-                                setattr(sys.modules[__name__], _type.__name__, _type)
+                                setattr(
+                                    sys.modules[__name__],
+                                    type_to_import.__name__,
+                                    type_to_import,
+                                )
                             else:
                                 class_set.append(_object)
+                else:
+                    if isinstance(_object, type_to_import):
+                        if not return_instances:
+                            class_set.add(_object)
+                            setattr(
+                                sys.modules[__name__], type_to_import.__name__, type_to_import
+                            )
+                        else:
+                            class_set.append(_object)
 
             first_pass = False
 

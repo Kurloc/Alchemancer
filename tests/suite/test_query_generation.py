@@ -5,45 +5,24 @@ from typing import Dict
 import pytest
 from sql_formatter.core import format_sql
 from sqlalchemy import func, over
-from sqlalchemy.dialects.postgresql import aggregate_order_by
+from sqlalchemy.dialects.postgresql import INTERVAL, aggregate_order_by
 
 from alchemancer.query_generator import QueryGenerator
 from alchemancer.reflection_handler import ReflectionHandler
 from examples.resolvers.roles_resolver import RecursiveRolesResolver
 from tests.fixtures.test_dbs import psql_engine
 
-ReflectionHandler().init(
-    [
-        (
-            "tests.fixtures.models",
-            Path.joinpath(
-                (Path(__file__).parent.parent),
-                f"fixtures{os.sep}models",
-            ),
-        )
-    ],
-    [
-        (
-            "examples.resolvers",
-            Path.joinpath(
-                (Path(__file__).parent.parent.parent),
-                f"examples{os.sep}resolvers",
-            ),
-        )
-    ],
-)
-
 test_cases = [
     (x["name"], x)
-    for x in ReflectionHandler._import_modules_from_path(
+    for x in ReflectionHandler._import_objects_from_modules_via_path(
         str(
             Path.joinpath(
-                (Path(__file__).parent.parent.parent),  # suite dir  # tests dir
+                Path(__file__).parent.parent.parent,  # suite dir  # tests dir
                 "examples/queries",
             )
         ),
         "examples.queries",
-        [dict],
+        dict,
         check_subclasses_of_type=False,
         return_instances=True,
     )
@@ -58,7 +37,7 @@ def test_query(name, test_dict: Dict):
             (
                 "tests.fixtures.models",
                 Path.joinpath(
-                    (Path(__file__).parent.parent),
+                    Path(__file__).parent.parent,
                     f"fixtures{os.sep}models",
                 ),
             )
@@ -67,7 +46,7 @@ def test_query(name, test_dict: Dict):
             (
                 "examples.resolvers",
                 Path.joinpath(
-                    (Path(__file__).parent.parent.parent),
+                    Path(__file__).parent.parent.parent,
                     f"examples{os.sep}resolvers",
                 ),
             )
@@ -81,6 +60,8 @@ def test_query(name, test_dict: Dict):
             "lag": func.lag,
             "lead": func.lead,
             "over": over,
+            "INTERVAL": INTERVAL,
+            "cast": func.cast,
         },
     )._process_query(test_dict["query"])
     print()
