@@ -1,24 +1,8 @@
-import os
-from pathlib import Path
-
 from sqlalchemy.dialects.postgresql import aggregate_order_by
 from sqlalchemy.sql.functions import array_agg, coalesce, func
 
 from alchemancer.ast_handler import AstHandler
-from alchemancer.reflection_handler import ReflectionHandler
 from tests.fixtures.models.user import User
-
-handler = ReflectionHandler().init(
-    [
-        (
-            "tests.fixtures.models",
-            Path.joinpath(
-                (Path(__file__).parent.parent),  # suite dir  # tests dir
-                f"fixtures{os.sep}models",
-            ),
-        )
-    ]
-)
 
 
 def test_ast_functions_1():
@@ -75,7 +59,7 @@ def test_ast_functions_3():
 
 
 def test_ast_obj():
-    assert type(User) == type(AstHandler().convert_ast_to_sqlalchemy_column("User", {}))
+    assert type(User) is type(AstHandler().convert_ast_to_sqlalchemy_column("User", {}))
 
 
 def test_ast_constant():
