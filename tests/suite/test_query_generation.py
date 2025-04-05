@@ -83,6 +83,7 @@ def test_query(name, test_dict: Dict):
             "over": over,
             "INTERVAL": INTERVAL,
             "cast": func.cast,
+            "count": func.count,
         },
     )._process_query(test_dict["query"])
     print()

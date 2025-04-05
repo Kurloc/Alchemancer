@@ -99,6 +99,10 @@ class HqlSelect(TypedDict):
     value: NotRequired[ValueTypesT]
     whens: NotRequired[List[HqlWhenThen]]
     else_: NotRequired["HqlSelect"]
+    # this is for columns where we select and filter as a column select, very esoteric
+    # most commonly used in subqueries
+    select: NotRequired[Union[str, Dict[str, Self]]]
+    where: NotRequired[WhereClausT]
 
 
 class HqlJoin(TypedDict):
@@ -113,8 +117,8 @@ class HqlCTE(TypedDict):
 
 class HqlUnion(TypedDict):
     name: str
-    left: "HqlQuery"
-    right: "HqlQuery"
+    left: "HqlQueryUnion"
+    right: "HqlQueryUnion"
     cte: HqlCTE
 
 
@@ -127,14 +131,17 @@ class HqlQuery(TypedDict):
     offset: NotRequired[int]
     order_by: NotRequired[Dict[str, HqlSort]]
     group_by: NotRequired[List[str]]
-    distinct: NotRequired[bool]
+    distinct: NotRequired[Union[bool, List[str]]]
     subqueries: NotRequired[Dict[str, Self]]
     cte: NotRequired[HqlCTE]
     union: NotRequired[HqlUnion]
     union_all: NotRequired[HqlUnion]
     resolver_args: NotRequired[Dict[str, PrimitiveT]]
-    alias: NotRequired[str]
     debug: NotRequired[Literal["html", "str"]]
+
+
+class HqlQueryUnion(HqlQuery):
+    alias: NotRequired[str]
 
 
 # Generator Models
