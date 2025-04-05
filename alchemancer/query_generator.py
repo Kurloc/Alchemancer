@@ -180,10 +180,12 @@ class QueryGenerator:
         # unless we can guarantee the order, which seems like a crap shoot since it's up to the JSON implementation
         # which may be different across web frameworks
         context_dict["subqueries"] = {}
+        context_dict["subqueries_original"] = {}
         for subquery_name in subqueries:
             subquery = cast(HqlQuery, subqueries[subquery_name])
             processed_subquery = self._process_query(subquery, context_dict, connection)
             context_dict["subqueries"][subquery_name] = processed_subquery.query.subquery()
+            context_dict["subqueries_original"][subquery_name] = processed_subquery.query
 
     def _process_selects(
         self,
@@ -295,15 +297,24 @@ class QueryGenerator:
                 if model_or_subquery is None:
                     raise Exception("we need something here!")
 
-                if is_subquery:
+                if is_subquery and field_name != model_name:
                     column = getattr(model_or_subquery.c, field_name)
+                    value = self._return_value_from_hql_select_or_string(
+                        where[key], context_dict
+                    )
+                elif is_subquery and field_name == model_name:
+                    column = context_dict["subqueries_original"][model_name]
+                    value = None
                 else:
                     column = self.__reflection_handler.model_field_cache[model_name][field_name]
+                    value = self._return_value_from_hql_select_or_string(
+                        where[key], context_dict
+                    )
 
                 clauses.append(
                     operation(
                         column,
-                        self._return_value_from_hql_select_or_string(where[key], context_dict),
+                        value,
                     )
                 )
 
@@ -560,6 +571,12 @@ class QueryGenerator:
         if operation == "not_ilike":
             return not_ilike_op
 
+        if operation == "exists":
+            return lambda scalar_query, _: scalar_query.exists()
+
+        if operation == "not_exists":
+            return lambda scalar_query, _: ~scalar_query.exists()
+
         if operation == "lt":
             return lambda comparator, _value: comparator < _value
 
@@ -584,7 +601,7 @@ class QueryGenerator:
     ) -> Tuple[str, str, Callable]:
         key_split = key.split(".")
         model_name = key_split[0]
-        action_split = key_split[1].split("__")
+        action_split = key_split[-1].split("__")
         field_name = action_split[0]
         operation = QueryGenerator._get_operation_from_action_name(action_split[1])
-        return model_name, field_name, operation
+        return model_name if len(key_split) > 1 else field_name, field_name, operation

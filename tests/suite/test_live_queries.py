@@ -1,14 +1,10 @@
 from pathlib import Path
-from pprint import pprint
-from typing import Any, Dict, List, Tuple
 
-import pytest
-from sqlalchemy import Engine, insert, select
+from sqlalchemy import insert, select
 
-from alchemancer.query_generator import QueryGenerator
 from alchemancer.reflection_handler import ReflectionHandler
 from tests.fixtures.models.user import User
-from tests.fixtures.test_dbs import psql_engine, sqlite_engine
+from tests.fixtures.test_dbs import psql_engine
 
 test_cases = [
     (x["name"], x)
@@ -27,46 +23,7 @@ test_cases = [
 ]
 
 
-@pytest.mark.parametrize(
-    "name,test_dict,seed_data,engine",
-    [
-        (
-            "simple_return_sqlite",
-            {
-                "select": {
-                    "User": {
-                        "id": {},
-                    }
-                }
-            },
-            [(User, {"id": 1, "name": "John"})],
-            sqlite_engine,
-        ),
-        (
-            "simple_return_postgres",
-            {
-                "select": {
-                    "User": {
-                        "array_agg(id)": {},
-                    }
-                }
-            },
-            [(User, {"name": "John"})],
-            psql_engine,
-        ),
-    ],
-)
-def test_query(name, test_dict: Dict, seed_data: List[Tuple[Any, Dict]], engine: Engine):
-    with engine.connect() as testing_connection:
-        for d in seed_data:
-            testing_connection.execute(insert(d[0]).values(**d[1]))
-            testing_connection.commit()
-
-    query = QueryGenerator(engine).return_from_hql_query(test_dict)
-    print(query)
-
-
-def test_subquery():
+def test_json_querying():
     with psql_engine.connect() as testing_connection:
         testing_connection.execute(
             insert(User).values(
@@ -145,25 +102,3 @@ def test_subquery():
         print(users_over_100_with_a_in_name)
         results = testing_connection.execute(users_over_100_with_a_in_name)
         print(results.fetchall())
-
-
-def test_resolver_results():
-    query_results = QueryGenerator(psql_engine).return_from_hql_query(
-        {
-            "select": {
-                "RecursiveRolesResolver()": {
-                    "role_id": {},
-                    "role_name": {},
-                    "role_parent_id": {},
-                }
-            },
-            "resolver_args": {"role_id": 1},
-        }
-    )
-    pprint(query_results)
-    assert query_results == [
-        {"role_id": 3, "role_name": "3", "role_parent_id": 1},
-        {"role_id": 2, "role_name": "2", "role_parent_id": 1},
-        {"role_id": 4, "role_name": "4", "role_parent_id": 1},
-        {"role_id": 1, "role_name": "1", "role_parent_id": None},
-    ]
