@@ -1,8 +1,15 @@
+import sys
+
+# if python_version < 3.11
+if sys.version_info[1] < 11:
+    from typing_extensions import Self
+else:
+    from typing import Self
+
 from typing import (
     Dict,
     Literal,
     Optional,
-    Self,
     TypeAlias,
     Union,
     cast,
