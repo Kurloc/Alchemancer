@@ -20,6 +20,7 @@ different underlying implementation details
 8) Tutorials
 9) User Docs
 10) Implementer Docs
+11) Query cataloguing logic (Handle computing hashs for a query so you can catalogue them by hash. Hashing implementation should focus on query shape and strip out params)
 
 # Resolver Support
 
