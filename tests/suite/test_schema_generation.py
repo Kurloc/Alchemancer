@@ -7,7 +7,7 @@ from sqlalchemy import Engine, insert, select
 
 from alchemancer.query_generator import QueryGenerator
 from alchemancer.reflection_handler import ReflectionHandler
-from tests.fixtures.models.user import User
+from tests.fixtures.models.generic.user import User
 from tests.fixtures.test_dbs import psql_engine, sqlite_engine
 
 test_cases = [

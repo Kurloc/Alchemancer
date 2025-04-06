@@ -1,10 +1,17 @@
 import inspect
 import os
 import sys
+from datetime import date, datetime
 from pathlib import Path
 from typing import Dict, List, Set, Tuple, Type, TypeVar, Union, cast
 
-from marshmallow.fields import Boolean, Float, Integer, String
+from marshmallow.fields import Boolean
+from marshmallow.fields import Date as MarshmallowDate
+from marshmallow.fields import DateTime as MarshmallowDateTime
+from marshmallow.fields import Dict as MarshmallowDict
+from marshmallow.fields import Float, Integer
+from marshmallow.fields import List as MarshmallowList
+from marshmallow.fields import String
 from sqlalchemy.orm import DeclarativeBase
 
 from alchemancer.types.marshmallow import JsonBField, JsonField
@@ -28,7 +35,10 @@ class ReflectionHandler:
         float: Float,
         str: String,
         bool: Boolean,
-        dict: Dict,
+        dict: MarshmallowDict,
+        list: MarshmallowList,
+        date: MarshmallowDate,
+        datetime: MarshmallowDateTime,
         JsonBField: JsonBField,
         JsonField: JsonBField,
     }
@@ -114,6 +124,7 @@ class ReflectionHandler:
 
             objects_to_possibly_import = []
             for file in files_to_import_from:
+                # @TODO: There is a bug here where the path is incorrect when recursing directories
                 files_module_name = f"{module_chain}.{file}"
                 _modules_to_import = [
                     __import__(files_module_name, fromlist=[f"{dir_path}{os.sep}{file}"])

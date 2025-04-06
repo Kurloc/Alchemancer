@@ -5,7 +5,8 @@ from sqlalchemy import text
 from sqlalchemy_utils import create_database, database_exists
 
 from alchemancer import ReflectionHandler
-from tests.fixtures.models.base_model import BaseModel
+from tests.fixtures.models.generic.base_model import BaseModel
+from tests.fixtures.models.postgresql.psql_base_model import PsqlBaseModel
 from tests.fixtures.test_dbs import psql_engine, sqlite_engine
 
 
@@ -30,8 +31,12 @@ def init_test_suite():
     ReflectionHandler().init(
         [
             (
-                "tests.fixtures.models",
-                Path.joinpath(Path(__file__).parent, "models"),
+                "tests.fixtures.models.generic",
+                Path.joinpath(Path(__file__).parent, "models", "generic"),
+            ),
+            (
+                "tests.fixtures.models.postgresql",
+                Path.joinpath(Path(__file__).parent, "models", "postgresql"),
             ),
         ],
         [
@@ -47,6 +52,9 @@ def init_test_suite():
 
     BaseModel.metadata.create_all(psql_engine)
     BaseModel.metadata.create_all(sqlite_engine)
+
+    # Create models for PSQL specific test
+    PsqlBaseModel.metadata.create_all(psql_engine)
 
 
 init_test_suite()

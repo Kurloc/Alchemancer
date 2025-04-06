@@ -22,6 +22,7 @@ from alchemancer.query_transformation_handler import (
     SortItemNode,
     WhenThenNode,
     WhereClauseNode,
+    SubqueryNode,
 )
 from alchemancer.types.query import HqlQuery
 
@@ -110,6 +111,7 @@ sample_query = {
                 DistinctNode(
                     alias="distinct",
                 ),
+                SubqueryNode(),
                 HqlCTENode(
                     name_alias="name",
                     recursive_alias="recursive",
@@ -246,6 +248,7 @@ sample_query = {
                 DistinctNode(
                     alias="🌟",
                 ),
+                SubqueryNode(),
                 HqlCTENode(
                     name_alias="name",
                     recursive_alias="recursive",

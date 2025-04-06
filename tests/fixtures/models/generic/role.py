@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Mapped, mapped_column
 
-from tests.fixtures.models.base_model import BaseModel
+from tests.fixtures.models.generic.base_model import BaseModel
 
 
 class Role(BaseModel):
