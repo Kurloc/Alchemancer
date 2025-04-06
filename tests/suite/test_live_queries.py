@@ -2,8 +2,10 @@ from pathlib import Path
 
 from sqlalchemy import insert, select
 
+from alchemancer.query_generator import QueryGenerator
 from alchemancer.reflection_handler import ReflectionHandler
-from tests.fixtures.models.user import User
+from tests.fixtures.models.generic.user import User
+from tests.fixtures.models.postgresql.system import System
 from tests.fixtures.test_dbs import psql_engine
 
 test_cases = [
@@ -102,3 +104,77 @@ def test_json_querying():
         print(users_over_100_with_a_in_name)
         results = testing_connection.execute(users_over_100_with_a_in_name)
         print(results.fetchall())
+
+
+def test_psql_networking_type_interop():
+    with psql_engine.connect() as testing_connection:
+        testing_connection.execute(
+            insert(System).values(
+                [
+                    {
+                        "cidr": "192.168.100.128/25",
+                        "inet": "192.168.0.1/24",
+                        "macaddr": "08:00:2b:01:02:03",
+                        "macaddr8": "08:00:2b:01:02:03:04:05",
+                    }
+                ]
+            )
+        )
+        testing_connection.commit()
+
+        system_select = select(
+            System.cidr,
+            System.inet,
+            System.macaddr,
+            System.macaddr8,
+        )
+        print(system_select)
+        results = testing_connection.execute(system_select).fetchall()[0]
+        print(results)
+
+    assert results[0] == "192.168.100.128/25"
+    assert results[1] == "192.168.0.1/24"
+    assert results[2] == "08:00:2b:01:02:03"
+    assert results[3] == "08:00:2b:01:02:03:04:05"
+
+
+def test_psql_networking_type_responses_from_alchemancer():
+    with psql_engine.connect() as testing_connection:
+        testing_connection.execute(
+            insert(System).values(
+                [
+                    {
+                        "cidr": "192.168.100.128/25",
+                        "inet": "192.168.0.1/24",
+                        "macaddr": "08:00:2b:01:02:03",
+                        "macaddr8": "08:00:2b:01:02:03:04:05",
+                    }
+                ]
+            )
+        )
+        testing_connection.commit()
+
+    query_generator = QueryGenerator(
+        psql_engine,
+        {},
+    )
+    results = query_generator.return_from_hql_query(
+        {
+            "select": {
+                "System": {
+                    "cidr": {},
+                    "inet": {},
+                    "macaddr": {},
+                    "macaddr8": {},
+                }
+            },
+        }
+    )
+
+    print(results)
+    assert results[0] == {
+        "cidr": "192.168.100.128/25",
+        "inet": "192.168.0.1/24",
+        "macaddr": "08:00:2b:01:02:03",
+        "macaddr8": "08:00:2b:01:02:03:04:05",
+    }

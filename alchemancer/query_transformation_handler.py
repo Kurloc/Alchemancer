@@ -2,9 +2,9 @@ import sys
 
 # if python_version < 3.11
 if sys.version_info[1] < 11:
-    from typing_extensions import Self
+    from typing_extensions import Callable, Self
 else:
-    from typing import Self
+    from typing import Self, Callable
 
 from typing import (
     Dict,
@@ -74,6 +74,9 @@ class SortItemNode:
     dir_alias: str
     asc_alias: str
     desc_alias: str
+    """Used to convert the sort item to a proper HqlSort object. For instance some schemas support Key, dir 
+    and were flat without index"""
+    sort_item_conversion_function: Optional[Callable[[Union[str, Dict]], HqlSort]] = None
 
     def __init__(
         self,
@@ -82,12 +85,14 @@ class SortItemNode:
         dir_alias: str = "dir",
         asc_alias: str = "asc",
         desc_alias: str = "desc",
+        conversion_function: Optional[callable] = None,
     ) -> None:
         self.index_alias = index_alias
         self.nulls_last_alias = nulls_last_alias
         self.dir_alias = dir_alias
         self.asc_alias = asc_alias
         self.desc_alias = desc_alias
+        self.sort_item_conversion_function = conversion_function
 
 
 class OrderByNode:
@@ -246,6 +251,17 @@ class JoinNode:
             self.where_node = where_node
 
 
+class SubqueryNode:
+    alias: str
+    query_node: "QueryTransformation"
+
+    def __init__(
+        self, alias: str = "subqueries", query_node: "QueryTransformation" = None
+    ) -> None:
+        self.alias = alias
+        self.query_node = query_node
+
+
 class QueryTransformation:
     select: SelectNode
     joins: JoinNode
@@ -257,7 +273,7 @@ class QueryTransformation:
     order_by: OrderByNode
     group_by: GroupByNode
     distinct: DistinctNode
-    subqueries: "QueryTransformation"
+    subqueries: "SubqueryNode"
     cte: HqlCTENode
     union: HqlUnionNode
     union_all: HqlUnionNode
@@ -276,6 +292,7 @@ class QueryTransformation:
         order_by: OrderByNode,
         group_by: GroupByNode,
         distinct: DistinctNode,
+        subquery: SubqueryNode,
         cte: HqlCTENode,
         union: HqlUnionNode,
         union_all: HqlUnionNode,
@@ -286,6 +303,9 @@ class QueryTransformation:
             joins.select_node = select
         if joins.where_node is None:
             joins.where_node = where
+
+        if subquery.query_node is None:
+            subquery.query_node = self
 
         union.left_node = self
         union.right_node = self
@@ -301,7 +321,7 @@ class QueryTransformation:
         self.order_by = order_by
         self.group_by = group_by
         self.distinct = distinct
-        self.subqueries = self
+        self.subqueries = subquery
         self.cte = cte
         self.union = union
         self.union_all = union_all
@@ -315,10 +335,14 @@ class QueryTransformationHandler:
     def __init__(self, transformations: Dict[TransformationName, QueryTransformation]) -> None:
         self._transformations = transformations
 
-    def transform_query(self, hql_query: Dict) -> HqlQuery:
+    def transform_query(
+        self, hql_query: Dict, target_transformation: Union[QueryTransformation, None] = None
+    ) -> HqlQuery:
         # This method should implement the logic to transform the HQL query
         # using the transformations defined in self._transformations
-        target_transformation = self.find_transformation(hql_query)
+        if target_transformation is None:
+            target_transformation = self.find_transformation(hql_query)
+
         if target_transformation is None:
             return hql_query
 
@@ -400,17 +424,28 @@ class QueryTransformationHandler:
         if order_by := hql_query.get(target_transformation.order_by.alias):
             return_order_by = {}
             for key, value in order_by.items():
-                nulls_last = value.get(
-                    target_transformation.order_by.sort_node.nulls_last_alias, None
+                sort_conversion_function = (
+                    target_transformation.order_by.sort_node.sort_item_conversion_function
                 )
-                order_direction = value.get(target_transformation.order_by.sort_node.dir_alias)
+                if sort_conversion_function is not None:
+                    value = sort_conversion_function(value)
+
+                nulls_last = value.get(
+                    target_transformation.order_by.sort_node.nulls_last_alias,
+                    value.get("nulls_last", None),
+                )
+                order_direction = value.get(
+                    target_transformation.order_by.sort_node.dir_alias, value.get("dir")
+                )
                 if order_direction == target_transformation.order_by.sort_node.asc_alias:
                     order_direction = "asc"
                 if order_direction == target_transformation.order_by.sort_node.desc_alias:
                     order_direction = "desc"
 
                 updated_order_by_item = {
-                    "index": value.get(target_transformation.order_by.sort_node.index_alias),
+                    "index": value.get(
+                        target_transformation.order_by.sort_node.index_alias, value.get("index")
+                    ),
                     "dir": order_direction,
                 }
                 if nulls_last is not None:
@@ -436,6 +471,34 @@ class QueryTransformationHandler:
         )
         if len(return_query["having"].keys()) == 0:
             return_query.pop("having")
+
+        # subquery
+        if subquery := hql_query.get(target_transformation.subqueries.alias):
+            if not isinstance(subquery, dict):
+                raise TypeError("subquery needs to be a Dict[str, HqlQuery]")
+
+            for key, value in subquery.items():
+                subquery[key] = self.transform_query(
+                    subquery[key], target_transformation.subqueries.query_node
+                )
+
+            return_query["subqueries"] = subquery
+
+        # cte
+        # @TODO: Add it
+
+        # union
+        # @TODO: Add it
+
+        # union_all
+        # @TODO: Add it
+
+        # resolver_args
+        if resolver_args := hql_query.get(target_transformation.resolver_args.alias):
+            if not isinstance(resolver_args, dict):
+                raise TypeError("resolver_args needs to be a Dict[str, Any]")
+
+            return_query["resolver_args"] = resolver_args
 
         return return_query
 

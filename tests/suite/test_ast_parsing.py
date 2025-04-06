@@ -2,7 +2,7 @@ from sqlalchemy.dialects.postgresql import aggregate_order_by
 from sqlalchemy.sql.functions import array_agg, coalesce, func
 
 from alchemancer.ast_handler import AstHandler
-from tests.fixtures.models.user import User
+from tests.fixtures.models.generic.user import User
 
 
 def test_ast_functions_1():

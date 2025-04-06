@@ -1,5 +1,12 @@
 import ast
-from typing import Any, Callable, Dict, Optional, Tuple, cast
+import sys
+
+if sys.version_info[1] < 11:
+    from typing_extensions import Callable
+else:
+    from typing import Callable
+
+from typing import Any, Dict, Optional, Tuple, cast
 
 from sqlalchemy import Select
 

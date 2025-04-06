@@ -1,6 +1,13 @@
+import sys
+
+if sys.version_info[1] < 11:
+    from typing_extensions import Callable
+else:
+    from typing import Callable
+
 from abc import ABCMeta, abstractmethod
 from datetime import date, datetime, time
-from typing import Any, Callable, Dict, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Type, Union
 
 from sqlalchemy import Column, Connection, Integer, MetaData, Select, Table
 

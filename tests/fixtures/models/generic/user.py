@@ -4,7 +4,7 @@ from typing import List, Optional
 from sqlalchemy import JSON, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from tests.fixtures.models.base_model import BaseModel
+from tests.fixtures.models.generic.base_model import BaseModel
 
 
 class Address(BaseModel):

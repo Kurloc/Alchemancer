@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from typing import Dict
 
@@ -32,26 +31,6 @@ test_cases = [
 @pytest.mark.parametrize("name,test_dict", test_cases)
 def test_query(name, test_dict: Dict):
     print(RecursiveRolesResolver().name)
-    ReflectionHandler().init(
-        [
-            (
-                "tests.fixtures.models",
-                Path.joinpath(
-                    Path(__file__).parent.parent,
-                    f"fixtures{os.sep}models",
-                ),
-            )
-        ],
-        [
-            (
-                "examples.resolvers",
-                Path.joinpath(
-                    Path(__file__).parent.parent.parent,
-                    f"examples{os.sep}resolvers",
-                ),
-            )
-        ],
-    )
     expected_sql = test_dict["expected_sql"]
     query = QueryGenerator(
         psql_engine,

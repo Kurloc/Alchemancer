@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import VARCHAR, Column, Computed, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from tests.fixtures.models.base_model import BaseModel
+from tests.fixtures.models.generic.base_model import BaseModel
 
 
 class Vin(BaseModel):
