@@ -2,7 +2,7 @@ import sys
 
 # if python_version < 3.11
 if sys.version_info[1] < 11:
-    from typing_extensions import Self
+    from typing_extensions import Callable, Self
 else:
     from typing import Self, Callable
 
