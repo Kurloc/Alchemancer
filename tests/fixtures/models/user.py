@@ -31,6 +31,15 @@ class User(BaseModel):
     )
 
 
+class Driver(BaseModel):
+    __tablename__ = "driver"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    first_name: Mapped[str]
+    last_name: Mapped[str]
+    drivers_license_id: Mapped[str] = mapped_column(unique=True)
+
+
 #
 # spongebob = User(
 #          name="spongebob",

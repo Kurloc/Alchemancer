@@ -12,27 +12,6 @@ from alchemancer.reflection_handler import ReflectionHandler
 from examples.resolvers.roles_resolver import RecursiveRolesResolver
 from tests.fixtures.test_dbs import psql_engine
 
-ReflectionHandler().init(
-    [
-        (
-            "tests.fixtures.models",
-            Path.joinpath(
-                Path(__file__).parent.parent,
-                f"fixtures{os.sep}models",
-            ),
-        )
-    ],
-    [
-        (
-            "examples.resolvers",
-            Path.joinpath(
-                Path(__file__).parent.parent.parent,
-                f"examples{os.sep}resolvers",
-            ),
-        )
-    ],
-)
-
 test_cases = [
     (x["name"], x)
     for x in ReflectionHandler._import_objects_from_modules_via_path(
