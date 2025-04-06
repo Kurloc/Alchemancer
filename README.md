@@ -1,5 +1,5 @@
 TODO:
-
+--- Ordered by priority ---
 1) ~~SubQueries~~
    1) ~~Basic support has been implemented~~
    2) Need more tests 
@@ -14,13 +14,13 @@ than end users. We utilize this paradigm to enable support for like top level fe
 different underlying implementation details
    1) JSON query support
    2) Rule system to allow/deny access to fields based on user roles
-5) FastAPI example
-6) Django example
-7) Flask example
+5) Query cataloguing logic (Handle computing hashs for a query so you can catalogue them by hash. Hashing implementation should focus on query shape and strip out params)
+6) User Docs
+7) Implementer Docs
 8) Tutorials
-9) User Docs
-10) Implementer Docs
-11) Query cataloguing logic (Handle computing hashs for a query so you can catalogue them by hash. Hashing implementation should focus on query shape and strip out params)
+9) FastAPI example
+10) Django example
+11) Flask example
 
 # Resolver Support
 
@@ -29,10 +29,10 @@ Required Features:
 |          | Temp Tables | CTE / Literal Subquery |   |   |
 |----------|-------------|------------------------|---|---|
 | Postgres | ✔ ️         |                        |   |   |
-| Sqlite   |             |                        |   |   |
-| MySQL    |             |                        |   |   | 
-| MsSql    |             |                        |   |   |
-| Oracle   |             |                        |   |   |
+| Sqlite   | ?          |                        |   |   |
+| MySQL    | ✔          |                        |   |   | 
+| MsSql    | ✔          |                        |   |   |
+| Oracle   | ✔          |                        |   |   |
 
 # JSON Support
 
