@@ -27,6 +27,7 @@ from sqlalchemy.sql.operators import (
 )
 
 from alchemancer.ast_handler import AstHandler
+from alchemancer.query_transformation_handler import QueryTransformationHandler
 from alchemancer.reflection_handler import (
     ReflectionHandler,
 )
@@ -45,11 +46,17 @@ from alchemancer.types.query import (
 
 class QueryGenerator:
     __engine: Engine
+    __query_transformer: QueryTransformationHandler = None
     __reflection_handler: ReflectionHandler = ReflectionHandler
     __base_context_dict: Dict[str, Any]
     __ast_handler: AstHandler
 
-    def __init__(self, engine, base_context_dict: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self,
+        engine,
+        base_context_dict: Optional[Dict[str, Any]] = None,
+        query_transformer: QueryTransformationHandler = None,
+    ):
         self.__base_context_dict = {
             "array_agg": array_agg,
             "coalesce": coalesce,
@@ -57,8 +64,10 @@ class QueryGenerator:
         }
         self.__engine = engine
         self.__ast_handler = AstHandler(self.__reflection_handler)
+        self.__query_transformer = query_transformer or QueryTransformationHandler({})
 
     def return_from_hql_query(self, query: HqlQuery):
+        query = cast(HqlQuery, self.__query_transformer.transform_query(query))
         context_dict = {**self.__base_context_dict}
         with self.__engine.connect() as connection:
             with Session(bind=connection) as _:
@@ -424,7 +433,7 @@ class QueryGenerator:
             query = resolver.execute(**resolver_params)
         except Exception:
             print("resolver is not defined")
-            raise
+            raise Exception(f"resolver ({resolver_key}) is not defined")
 
         if join_columns:
             query = Select(*query.columns, *join_columns)
@@ -463,6 +472,7 @@ class QueryGenerator:
                 return select
         elif isinstance(select, Dict):
             label = select.get("label", None)
+            # when then value
             if "value" in select.keys():
                 value = self._return_value_from_hql_select_or_string(
                     select.get("value"), context_dict
@@ -474,6 +484,7 @@ class QueryGenerator:
                     value = value.distinct()
                 return value
 
+            # functional column handling
             if "(" in column_name and ")" in column_name:
                 select = self.__ast_handler.convert_ast_to_sqlalchemy_column(
                     column_name, context_dict, model_key
@@ -482,6 +493,7 @@ class QueryGenerator:
                     select = select.label(label)
                 return select
 
+            # standard column path
             if (
                 model_obj := self.__reflection_handler.model_field_cache.get(model_key, None)
             ) is not None:
@@ -503,9 +515,23 @@ class QueryGenerator:
                 model_key, None
             )
             if model_or_subquery is not None:
-                select = getattr(model_or_subquery.c, column_name)
+                columns_inner_select = select.get("select", None)
+                columns_inner_where = select.get("where", None)
+                if columns_inner_select is not None:
+                    select = self._return_value_from_hql_select_or_string(
+                        columns_inner_select, context_dict, model_key
+                    )
+                    if columns_inner_where is not None:
+                        filter_conditions = self._process_where_clause(
+                            columns_inner_where, context_dict
+                        )
+                        select = select.filter(*filter_conditions)
+                else:
+                    select = getattr(model_or_subquery.c, column_name)
+
                 if label is not None:
                     select = select.label(label)
+
                 return select
 
             raise Exception("Not implemented yet for type", type(select))

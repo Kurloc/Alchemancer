@@ -59,6 +59,12 @@ class AstHandler:
             or self.reflection_handler.model_field_cache.get(model_key, {}).get(name_obj.id)
         )
         if value is None and name_obj.id.lower() not in ["none", "null"]:
+            subquery_model = context.get("subqueries", {}).get(model_key, None)
+            if subquery_model is not None:
+                subquery_columns = [column.key for column in subquery_model.columns]
+                if name_obj.id in subquery_columns:
+                    return getattr(subquery_model.c, name_obj.id)
+
             raise Exception("Could not find", name_obj.id)
 
         return value
